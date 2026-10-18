@@ -5,6 +5,8 @@
 package main
 
 import (
+	"machine"
+	"runtime"
 	"time"
 
 	"github.com/hybridgroup/tinyflight/boards/stampfly"
@@ -26,8 +28,7 @@ func main() {
 	}
 
 	f := flight.New(b.Hardware, stampfly.Config())
-	go report(f)
-	f.Run()
+	startOnCores(f)
 }
 
 func report(f *flight.Flight) {
@@ -44,3 +45,21 @@ func report(f *flight.Flight) {
 }
 
 func deg(rad float32) int { return int(fmath.Degrees(rad)) }
+
+// startOnCores runs the flight loop alone on core 1. Core 0 takes interrupts, the radio,
+// the slow sensors and the printout. Build with -scheduler=cores to use both cores.
+func startOnCores(f *flight.Flight) {
+	go func() {
+		machine.AssignCore(0)
+		report(f)
+	}()
+	if runtime.NumCPU() < 2 {
+		f.Run()
+	}
+	go func() {
+		machine.AssignCore(0)
+		f.RunSensors()
+	}()
+	machine.AssignCore(1)
+	f.RunDedicated()
+}

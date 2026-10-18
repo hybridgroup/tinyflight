@@ -105,9 +105,20 @@ The commander only arms when:
 
 ## Timing
 
-Everything runs in one goroutine at a fixed rate, so the timing is the same every pass. The IMU is read on every pass. The slower sensors (barometer, distance sensor, magnetometer, battery) are read one at a time on their own schedules, so no single pass takes too long. `flight.Stats` records overruns and jitter.
+The flight loop runs at a fixed rate and reads the IMU on every pass.
 
-The flight loop never allocates memory after startup. `TestStepDoesNotAllocate` checks this, because a garbage collection pause in the middle of flight would cause a twitch.
+On a dual core chip like the ESP32-S3, built with `-scheduler=cores`, the two cores split the work:
+
+| Core | Runs |
+|---|---|
+| 1 | Only the flight loop: IMU and optical flow over SPI, estimators, controllers and motors. It waits for the next pass by watching the clock instead of sleeping, so nothing else can delay it. |
+| 0 | Interrupts, the radio, the slower I2C sensors (barometer, distance sensor, magnetometer, battery) and status printing. |
+
+`RunSensors` reads the slow sensors on core 0. It hands each new reading to the flight loop through a small locked mailbox, and the loop picks it up on its next pass. The ToF sensor alone takes about 5 ms per reading, which is two whole loop passes, so keeping it off core 1 matters.
+
+On a single core, or in the simulator, the loop reads at most one slow sensor per pass instead, so no single pass takes too long.
+
+`flight.Stats` records overruns, jitter and the slowest pass. The flight loop never allocates memory after startup. `TestStepDoesNotAllocate` checks this, because a garbage collection pause in the middle of flight would cause a twitch.
 
 ## Filters and go-estimate
 

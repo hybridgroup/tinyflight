@@ -5,6 +5,7 @@
 package main
 
 import (
+	"machine"
 	"runtime"
 	"time"
 
@@ -36,8 +37,7 @@ func main() {
 	cfg := stampfly.Config()
 	cfg.Schedule.FlowHz = 20
 	f := flight.New(b.Hardware, cfg)
-	go report(f)
-	f.Run()
+	startOnCores(f)
 }
 
 func report(f *flight.Flight) {
@@ -72,3 +72,21 @@ func report(f *flight.Flight) {
 func mm(v float32) int   { return int(v * 1000) }
 func deg(v float32) int  { return int(fmath.Degrees(v)) }
 func mdeg(v float32) int { return int(fmath.Degrees(v) * 1000) }
+
+// startOnCores runs the flight loop alone on core 1. Core 0 takes interrupts, the radio,
+// the slow sensors and the printout. Build with -scheduler=cores to use both cores.
+func startOnCores(f *flight.Flight) {
+	go func() {
+		machine.AssignCore(0)
+		report(f)
+	}()
+	if runtime.NumCPU() < 2 {
+		f.Run()
+	}
+	go func() {
+		machine.AssignCore(0)
+		f.RunSensors()
+	}()
+	machine.AssignCore(1)
+	f.RunDedicated()
+}

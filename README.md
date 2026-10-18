@@ -26,13 +26,15 @@ This includes closed loop tests that fly a simulated quad.
 
 Some pieces aren't merged upstream yet:
 
-- The `m5stamp-fly` target is on the `m5stamp-fly` branch of TinyGo.
+- The `m5stamp-fly` target and an ESP32-S3 SPI fix are on the `m5stamp-fly` and `esp32s3-spi-matrix` branches of TinyGo.
 - The sensor drivers are open PRs in tinygo-org/drivers. `go.mod` points at a local `../drivers-tinyflight` checkout that merges them.
 
+Build with the cores scheduler, so the flight loop gets a core to itself:
+
 ```
-tinygo flash -target m5stamp-fly ./cmd/stampfly-sensors
-tinygo flash -target m5stamp-fly ./cmd/stampfly-motortest
-tinygo flash -target m5stamp-fly ./cmd/stampfly
+tinygo flash -scheduler=cores -target m5stamp-fly ./cmd/stampfly-sensors
+tinygo flash -scheduler=cores -target m5stamp-fly ./cmd/stampfly-motortest
+tinygo flash -scheduler=cores -target m5stamp-fly ./cmd/stampfly
 ```
 
 ### Commands

@@ -78,18 +78,11 @@ type Flight struct {
 	landing  bool
 	imuFails int
 
-	tasks [5]task
-	next  int
+	slow  slowSensors
+	start time.Time
 	last  msg.Time
 	stats Stats
 	led   [3]uint8
-}
-
-// task is one slow sensor read on its own schedule.
-type task struct {
-	period msg.Time
-	due    msg.Time
-	run    func(f *Flight, now msg.Time) error
 }
 
 func New(hw Hardware, cfg params.Config) *Flight {
@@ -107,22 +100,9 @@ func New(hw Hardware, cfg params.Config) *Flight {
 	}
 	f.imu.Calibrate()
 	f.att.Q = fmath.IdentityQuat()
-	s := cfg.Schedule
-	f.tasks = [5]task{
-		newTask(s.BaroHz, hw.Baro != nil, (*Flight).readBaro),
-		newTask(s.RangeHz, hw.Range != nil, (*Flight).readRange),
-		newTask(s.FlowHz, hw.Flow != nil, (*Flight).readFlow),
-		newTask(s.MagHz, hw.Mag != nil, (*Flight).readMag),
-		newTask(s.BatteryHz, hw.Power != nil, (*Flight).readBattery),
-	}
+	f.start = time.Now()
+	f.setupSlowSensors()
 	return f
-}
-
-func newTask(hz float32, present bool, run func(*Flight, msg.Time) error) task {
-	if hz <= 0 || !present {
-		return task{}
-	}
-	return task{period: msg.Time(1e6 / hz), run: run}
 }
 
 func (f *Flight) Status() msg.VehicleStatus      { return f.status }
@@ -138,29 +118,47 @@ func (f *Flight) Mag() msg.MagSample             { return f.magS }
 func (f *Flight) Flow() msg.FlowSample           { return f.flow }
 func (f *Flight) Setpoint() msg.RateSetpoint     { return f.rateSp }
 func (f *Flight) ThrustTorque() msg.ThrustTorque { return f.tt }
-func (f *Flight) Stats() Stats                   { return f.stats }
 func (f *Flight) Calibrated() bool               { return f.imu.Calibrated() }
 
-// Run steps the loop at cfg.LoopHz forever.
-func (f *Flight) Run() {
+func (f *Flight) Stats() Stats {
+	s := f.stats
+	s.SensorErrors = f.slow.errors.Load()
+	return s
+}
+
+// now is the time since New in microseconds.
+func (f *Flight) now() msg.Time { return msg.Time(time.Since(f.start) / time.Microsecond) }
+
+// Run steps the loop at cfg.LoopHz forever, sleeping between passes.
+func (f *Flight) Run() { f.run(false) }
+
+// RunDedicated is Run for a loop that has a core to itself. It waits by watching the clock,
+// so it never depends on the scheduler waking it on time.
+func (f *Flight) RunDedicated() { f.run(true) }
+
+func (f *Flight) run(spin bool) {
 	period := time.Duration(float32(time.Second) / f.cfg.LoopHz)
-	start := time.Now()
-	next := start
+	next := time.Now()
 	for {
 		t := time.Now()
 		if j := t.Sub(next); j > f.stats.MaxJitter {
 			f.stats.MaxJitter = j
 		}
-		f.Step(msg.Time(t.Sub(start) / time.Microsecond))
+		f.Step(msg.Time(t.Sub(f.start) / time.Microsecond))
 		if d := time.Since(t); d > f.stats.MaxStep {
 			f.stats.MaxStep = d
 		}
 		next = next.Add(period)
-		if wait := time.Until(next); wait > 0 {
-			time.Sleep(wait)
-		} else {
+		if time.Until(next) <= 0 {
 			f.stats.Overruns++
 			next = time.Now()
+			continue
+		}
+		if spin {
+			for time.Now().Before(next) {
+			}
+		} else {
+			time.Sleep(time.Until(next))
 		}
 	}
 }
@@ -181,7 +179,8 @@ func (f *Flight) Step(now msg.Time) {
 	if f.hw.Input.ReadInput(&f.input) {
 		f.input.Time = now
 	}
-	f.runSlowTask(now)
+	f.runLoopSensors(now)
+	f.applySlowSensors()
 	f.estimate(dt)
 
 	wasArmed := f.status.Armed
@@ -221,79 +220,6 @@ func (f *Flight) readIMU(now msg.Time) bool {
 	f.raw.Time = now
 	f.imu.Update(&f.raw, &f.imuS)
 	return true
-}
-
-// runSlowTask reads at most one due slow sensor so no single pass takes too long.
-func (f *Flight) runSlowTask(now msg.Time) {
-	for i := range f.tasks {
-		k := (f.next + i) % len(f.tasks)
-		t := &f.tasks[k]
-		if t.run == nil || now < t.due {
-			continue
-		}
-		t.due += t.period
-		if t.due < now {
-			t.due = now + t.period
-		}
-		if err := t.run(f, now); err != nil && err != hal.ErrNotReady {
-			f.stats.SensorErrors++
-		}
-		f.next = k + 1
-		return
-	}
-}
-
-func (f *Flight) readBaro(now msg.Time) error {
-	if err := f.hw.Baro.ReadBaro(&f.baro); err != nil {
-		return err
-	}
-	f.baro.Time = now
-	if f.altEst.UpdateBaro(altest.PressureToAltitude(f.baro.Pressure)) {
-		f.pos.ZValid = true
-	}
-	return nil
-}
-
-func (f *Flight) readRange(now msg.Time) error {
-	if err := f.hw.Range.ReadRange(&f.rng); err != nil {
-		return err
-	}
-	f.rng.Time = now
-	if !f.rng.Valid {
-		return nil
-	}
-	cosTilt := f.att.Q.Down().Z
-	f.pos.Ground = f.rng.Distance * cosTilt
-	if f.altEst.UpdateRange(f.rng.Distance, cosTilt) {
-		f.pos.ZValid = true
-	}
-	return nil
-}
-
-func (f *Flight) readFlow(now msg.Time) error {
-	if err := f.hw.Flow.ReadFlow(&f.flow); err != nil {
-		return err
-	}
-	f.flow.Time = now
-	return nil
-}
-
-func (f *Flight) readMag(now msg.Time) error {
-	if err := f.hw.Mag.ReadMag(&f.magRaw); err != nil {
-		return err
-	}
-	f.magRaw.Time = now
-	f.imu.Mag(&f.magRaw, &f.magS)
-	f.attEst.SetMag(f.magS.Field)
-	return nil
-}
-
-func (f *Flight) readBattery(now msg.Time) error {
-	if err := f.hw.Power.ReadBattery(&f.batt); err != nil {
-		return err
-	}
-	f.batt.Time = now
-	return nil
 }
 
 func (f *Flight) estimate(dt float32) {
