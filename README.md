@@ -2,7 +2,7 @@
 
 # tinyflight
 
-Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). The first supported board is the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1).
+Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1).
 
 See [docs/architecture.md](docs/architecture.md) for how it works. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick.
 
@@ -60,9 +60,9 @@ tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-motortest
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly
 ```
 
-### Commands
+### Firmware
 
-| Command | What it does |
+| Firmware | What it does |
 |---|---|
 | `stampfly-sensors` | Prints every sensor, the attitude, loop timing and heap use. The motors stay off. |
 | `stampfly-motortest` | Spins each motor in turn when you press the button. Remove the propellers first. |

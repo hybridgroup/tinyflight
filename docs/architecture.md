@@ -67,6 +67,67 @@ Hardware specific code lives outside `pkg/`:
 | `firmware/` | Programs you flash: the flight firmware and bench tools. |
 | `tools/estimate` | Host-only checks against [go-estimate](https://github.com/milosgajdos/go-estimate). It has its own `go.mod`, so gonum never gets into the firmware. |
 
+## How the packages connect
+
+This shows how the StampFly flight firmware reaches each package. Solid arrows are direct calls. Dotted arrows are calls through the `pkg/hal` interfaces, which the `devices/` adapters implement. `pkg/fmath` and `pkg/msg` are used almost everywhere, so they are left out.
+
+```mermaid
+flowchart TD
+    fw["firmware/stampfly"]
+
+    subgraph hw [Hardware specific]
+        board["boards/stampfly"]
+        devs["devices/bmi270, bmm150, bmp280,<br/>ina3221, pmw3901, vl53l3cx,<br/>pwmmotors, lineinput"]
+        espnow["devices/espnowinput"]
+        drivers["tinygo.org/x/drivers"]
+    end
+
+    subgraph core [pkg]
+        flight["pkg/flight"]
+        params["pkg/params"]
+        input["pkg/input"]
+        hal["pkg/hal"]
+        sensors["pkg/sensors"]
+        filter["pkg/filter"]
+        estatt["pkg/estimator/attitude"]
+        estalt["pkg/estimator/altitude"]
+        commander["pkg/commander"]
+        pos["pkg/control/position"]
+        att["pkg/control/attitude"]
+        rate["pkg/control/rate"]
+        pid["pkg/control/pid"]
+        mixer["pkg/mixer"]
+    end
+
+    fw -->|New, Config| board
+    fw -->|Start| espnow
+    fw -->|New, RunDedicated, RunSensors| flight
+    fw -->|Merge, telemetry| input
+
+    board -->|set up chips| devs
+    board -->|default gains| params
+    devs --> drivers
+    devs -. implement .-> hal
+    espnow -. implement .-> hal
+    espnow --> input
+    devs --> input
+
+    flight -.->|read IMU, sensors, input,<br/>write motors| hal
+    flight --> sensors
+    flight --> estatt
+    flight --> estalt
+    flight --> commander
+    flight --> pos
+    flight --> att
+    flight --> rate
+    flight --> mixer
+
+    sensors --> filter
+    pos --> pid
+    rate --> pid
+    pid --> filter
+```
+
 ## Why the controllers come in a chain
 
 Each loop in the chain controls something that's faster and easier than the loop above it:
