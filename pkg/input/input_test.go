@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 )
 
@@ -31,7 +32,7 @@ func TestAtomDecode(t *testing.T) {
 	if err := a.Decode(packet(0.5, 0.6, -0.25, 0.75, 0, 0, 5), 7, &in); err != nil {
 		t.Fatal(err)
 	}
-	if math.Abs(float64(in.Climb)-0.5) > 1e-5 {
+	if fmath.Abs(in.Climb-0.5) > 1e-5 {
 		t.Errorf("climb %v", in.Climb)
 	}
 	in.Climb = 0
@@ -94,5 +95,25 @@ func TestParseLine(t *testing.T) {
 	}
 	if n := testing.AllocsPerRun(100, func() { ParseLine([]byte("rc 0 0 0 0 0 1"), 0, &in) }); n > 0 {
 		t.Errorf("ParseLine allocates %v times", n)
+	}
+}
+
+func TestAtomTelemetry(t *testing.T) {
+	var p [AtomTelemetrySize]byte
+	tel := AtomTelemetry{Roll: 1.5, Pitch: -2, Yaw: 90, Voltage: 3.9, Altitude: 0.75, AltFlag: 1, Mode: AtomModeFlight, FrontRange: 1234}
+	tel.Encode(&p)
+	f := func(off int) float32 { return math.Float32frombits(binary.LittleEndian.Uint32(p[off:])) }
+	// Offsets as the joystick reads them, 2 + 4*(slot-1), in OnDataRecv of the Atom-JoyStick StampFlyController.
+	if p[0] != 88 || p[1] != 88 {
+		t.Fatalf("header %d %d", p[0], p[1])
+	}
+	if f(10) != 1.5 || f(14) != -2 || f(18) != 90 || f(58) != 3.9 || f(98) != 0.75 {
+		t.Errorf("floats %v %v %v %v %v", f(10), f(14), f(18), f(58), f(98))
+	}
+	if p[110] != 1 || p[111] != AtomModeFlight || binary.LittleEndian.Uint16(p[112:]) != 1234 {
+		t.Errorf("flags %d %d %d", p[110], p[111], binary.LittleEndian.Uint16(p[112:]))
+	}
+	if n := testing.AllocsPerRun(100, func() { tel.Encode(&p) }); n > 0 {
+		t.Errorf("Encode allocates %v times", n)
 	}
 }

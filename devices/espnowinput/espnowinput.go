@@ -69,6 +69,25 @@ func Start() (*Input, error) {
 	return in, nil
 }
 
+// RunTelemetry broadcasts telemetry forever so the joystick can show the vehicle state.
+// fill is called before each send. It runs on core 0 and does not allocate.
+func (in *Input) RunTelemetry(every time.Duration, fill func(t *input.AtomTelemetry)) {
+	espradio.LockToCore0()
+	defer espradio.UnlockFromCore0()
+	var t input.AtomTelemetry
+	var pkt [input.AtomTelemetrySize]byte
+	addr := [6]byte(espradio.ESPNowBroadcastAddr)
+	for {
+		time.Sleep(every)
+		if !in.paired.Load() {
+			continue
+		}
+		fill(&t)
+		t.Encode(&pkt)
+		espradio.ESPNowSend(&addr, pkt[:])
+	}
+}
+
 // Paired reports whether a joystick has sent a valid packet.
 func (in *Input) Paired() bool { return in.paired.Load() }
 
