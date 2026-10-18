@@ -40,7 +40,7 @@ All the flight logic lives under `pkg/`. None of it imports hardware packages, s
 
 | Package | PX4 equivalent | What it does |
 |---|---|---|
-| `pkg/fmath` | matrix library | Vectors and quaternions in float32. A quaternion is a compact way to store a 3D orientation. |
+| `pkg/fmath` | matrix library | Vectors and quaternions in float32. A quaternion is a compact way to store a 3D orientation. Trig comes from [tinymath](https://github.com/orsinium-labs/tinymath), good to about 0.003 rad. |
 | `pkg/msg` | uORB messages | The data structs passed between stages. |
 | `pkg/hal` | driver interfaces | Interfaces a board has to provide, such as `IMU`, `Baro` and `Motors`. |
 | `pkg/filter` | mathlib filters | Low-pass filters that remove fast jitter, and notch filters that remove one specific vibration frequency. |
@@ -122,7 +122,7 @@ On a single core, or in the simulator, the loop reads at most one slow sensor pe
 
 ## Filters and go-estimate
 
-The on-board filters are written by hand in float32 with fixed-size arrays. The ESP32-S3 only has hardware float32 support, and the flight loop must not allocate. go-estimate is a general Kalman filter library built on gonum and float64, which makes it too heavy for the microcontroller. `tools/estimate` uses it on the PC to check that the on-board altitude filter gives the same answers as a reference implementation.
+The on-board filters are written by hand in float32 with fixed-size arrays. The ESP32-S3 only has hardware float32 support, so Tinyflight uses no float64 at all: every float64 operation runs in software and is many times slower. The flight loop must also not allocate. go-estimate is a general Kalman filter library built on gonum and float64, which makes it too heavy for the microcontroller. `tools/estimate` uses it on the PC to check that the on-board altitude filter gives the same answers as a reference implementation.
 
 ## Adding a new board
 
