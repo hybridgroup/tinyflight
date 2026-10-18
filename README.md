@@ -24,10 +24,31 @@ This includes closed loop tests that fly a simulated quad.
 
 ## Building for the StampFly
 
-Some pieces aren't merged upstream yet:
+Some pieces aren't merged upstream yet. Until they are, the build needs a TinyGo built with these PRs, and local checkouts next to this repo.
 
-- The `m5stamp-fly` target and an ESP32-S3 SPI fix are on the `m5stamp-fly` and `esp32s3-spi-matrix` branches of TinyGo.
-- The sensor drivers are open PRs in tinygo-org/drivers. `go.mod` points at a local `../drivers-tinyflight` checkout that merges them.
+**TinyGo**, with these PRs merged into `dev`:
+
+| PR | Change |
+|---|---|
+| [#5919](https://github.com/tinygo-org/tinygo/pull/5919) | cores scheduler wakes sleeping tasks on time |
+| [#5920](https://github.com/tinygo-org/tinygo/pull/5920) | ESP32-S3 SPI on any pins |
+| [#5921](https://github.com/tinygo-org/tinygo/pull/5921) | `m5stamp-fly` target |
+| [#5922](https://github.com/tinygo-org/tinygo/pull/5922) | ESP32 I2C without allocations |
+
+**`../drivers-tinyflight`**, a tinygo-org/drivers checkout with these PR branches merged:
+
+| PR | Driver |
+|---|---|
+| [#912](https://github.com/tinygo-org/drivers/pull/912) | vl53l3cx |
+| [#913](https://github.com/tinygo-org/drivers/pull/913) | bmm150 |
+| [#915](https://github.com/tinygo-org/drivers/pull/915) | bmp280 |
+| [#916](https://github.com/tinygo-org/drivers/pull/916) | ina3221 |
+| [#917](https://github.com/tinygo-org/drivers/pull/917) | bmi270 |
+| [#918](https://github.com/tinygo-org/drivers/pull/918) | pmw3901 |
+
+**`../espradio`**, a tinygo-org/espradio checkout of the `espnow-noalloc` branch from [#102](https://github.com/tinygo-org/espradio/pull/102), which builds on [#101](https://github.com/tinygo-org/espradio/pull/101).
+
+`go.mod` points at the two local checkouts with `replace` lines. They go away once the PRs merge.
 
 Build with the cores scheduler, so the flight loop gets a core to itself:
 
