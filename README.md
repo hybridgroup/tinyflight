@@ -1,7 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="images/tinyflight-logo-white.svg">
-  <img alt="tinyflight" src="images/tinyflight-logo.svg" width="400">
-</picture>
+<img alt="tinyflight" src="images/tinyflight-banner.svg" width="400">
 
 # tinyflight
 
