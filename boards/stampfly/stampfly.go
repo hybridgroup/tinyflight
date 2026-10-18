@@ -5,6 +5,7 @@
 package stampfly
 
 import (
+	"errors"
 	"machine"
 	"time"
 
@@ -34,6 +35,7 @@ const (
 	motorPWMHz      = 150_000
 	spiHz           = 2_000_000 // fastest the PMW3901 allows
 	i2cHz           = 400_000
+	tofBootTime     = 100 * time.Millisecond
 )
 
 // Board holds every device. A device that failed to start is left nil and listed in Errors.
@@ -57,7 +59,7 @@ func New() *Board {
 	b.Hardware.Motors = b.Motors
 
 	spi := machine.SPI0
-	b.check(spi.Configure(machine.SPIConfig{
+	b.check("spi", spi.Configure(machine.SPIConfig{
 		Frequency: spiHz,
 		SCK:       machine.SPI1_SCK_PIN,
 		SDO:       machine.SPI1_MOSI_PIN,
@@ -66,10 +68,10 @@ func New() *Board {
 	}))
 
 	i2c := machine.I2C0
-	b.check(i2c.Configure(machine.I2CConfig{Frequency: i2cHz, SDA: machine.SDA_PIN, SCL: machine.SCL_PIN}))
+	b.check("i2c", i2c.Configure(machine.I2CConfig{Frequency: i2cHz, SDA: machine.SDA_PIN, SCL: machine.SCL_PIN}))
 
 	imu := drvbmi270.NewSPI(spi, machine.BMI270_CS)
-	if b.check(imu.Configure(drvbmi270.Config{
+	if b.check("bmi270", imu.Configure(drvbmi270.Config{
 		AccelRange: drvbmi270.AccelRange8G,
 		AccelRate:  drvbmi270.AccelRate800Hz,
 		GyroRange:  drvbmi270.GyroRange2000,
@@ -79,7 +81,7 @@ func New() *Board {
 	}
 
 	flow := drvpmw3901.New(spi, machine.PMW3901_CS)
-	if b.check(flow.Configure()) {
+	if b.check("pmw3901", flow.Configure()) {
 		b.Hardware.Flow = pmw3901.New(&flow)
 	}
 
@@ -89,16 +91,16 @@ func New() *Board {
 		baro.Configure(drvbmp280.STANDBY_1MS, drvbmp280.FILTER_4X, drvbmp280.SAMPLING_2X, drvbmp280.SAMPLING_16X, drvbmp280.MODE_NORMAL)
 		b.Hardware.Baro = bmp280.New(&baro)
 	} else {
-		b.check(errMissing("bmp280"))
+		b.check("bmp280", errNotFound)
 	}
 
 	mag := drvbmm150.New(i2c)
-	if b.check(mag.Configure(drvbmm150.Config{DataRate: drvbmm150.DataRate20Hz})) {
+	if b.check("bmm150", mag.Configure(drvbmm150.Config{DataRate: drvbmm150.DataRate20Hz})) {
 		b.Hardware.Mag = bmm150.New(mag)
 	}
 
 	power := drvina3221.New(i2c)
-	if b.check(power.Configure(drvina3221.DefaultConfig)) {
+	if b.check("ina3221", power.Configure(drvina3221.DefaultConfig)) {
 		b.Hardware.Power = ina3221.New(&power, batteryChannel)
 	}
 
@@ -120,7 +122,7 @@ func Config() params.Config {
 
 func (b *Board) setupMotors() *pwmmotors.Motors {
 	pwm := machine.PWM0
-	b.check(pwm.Configure(machine.PWMConfig{Period: uint64(time.Second) / motorPWMHz}))
+	b.check("motor pwm", pwm.Configure(machine.PWMConfig{Period: uint64(time.Second) / motorPWMHz}))
 	var ch [4]uint8
 	for i, p := range []machine.Pin{
 		machine.MOTOR_FRONT_LEFT,
@@ -129,7 +131,7 @@ func (b *Board) setupMotors() *pwmmotors.Motors {
 		machine.MOTOR_REAR_RIGHT,
 	} {
 		c, err := pwm.Channel(p)
-		b.check(err)
+		b.check("motor pwm", err)
 		ch[i] = c
 	}
 	m := pwmmotors.New(pwm, ch[:]...)
@@ -138,7 +140,7 @@ func (b *Board) setupMotors() *pwmmotors.Motors {
 }
 
 // setupToF moves the front sensor to a new address so both can share the bus.
-// Same order as tof_init in tof.cpp of the M5StampFly firmware.
+// Timing follows tof_init in tof.cpp of the M5StampFly firmware.
 func (b *Board) setupToF(i2c *machine.I2C) {
 	for _, p := range []machine.Pin{machine.TOF_BOTTOM_XSHUT, machine.TOF_FRONT_XSHUT} {
 		p.Configure(machine.PinConfig{Mode: machine.PinOutput})
@@ -147,31 +149,37 @@ func (b *Board) setupToF(i2c *machine.I2C) {
 	time.Sleep(10 * time.Millisecond)
 
 	machine.TOF_FRONT_XSHUT.High()
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(tofBootTime)
 	front := drvvl53l3cx.New(i2c)
-	if b.check(front.SetAddress(frontToFAddress)) {
-		if b.check(front.Configure(drvvl53l3cx.Config{Mode: drvvl53l3cx.Short})) {
-			b.FrontToF = front
-		}
+	// Configure reloads the address from NVM, so the new address goes after it.
+	if b.check("front tof", front.Configure(drvvl53l3cx.Config{Mode: drvvl53l3cx.Long})) &&
+		b.check("front tof address", front.SetAddress(frontToFAddress)) {
+		b.FrontToF = front
 	}
 
 	machine.TOF_BOTTOM_XSHUT.High()
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(tofBootTime)
 	bottom := drvvl53l3cx.New(i2c)
-	if b.check(bottom.Configure(drvvl53l3cx.Config{Mode: drvvl53l3cx.Medium, TimingBudget: 33000})) &&
-		b.check(bottom.StartRanging()) {
+	if b.check("bottom tof", bottom.Configure(drvvl53l3cx.Config{Mode: drvvl53l3cx.Medium, TimingBudget: 33000})) &&
+		b.check("bottom tof start", bottom.StartRanging()) {
 		b.Hardware.Range = vl53l3cx.New(bottom)
 	}
 }
 
-func (b *Board) check(err error) bool {
+func (b *Board) check(device string, err error) bool {
 	if err != nil {
-		b.Errors = append(b.Errors, err)
+		b.Errors = append(b.Errors, SetupError{Device: device, Err: err})
 		return false
 	}
 	return true
 }
 
-type errMissing string
+// SetupError says which device failed to start.
+type SetupError struct {
+	Device string
+	Err    error
+}
 
-func (e errMissing) Error() string { return string(e) + ": not found" }
+func (e SetupError) Error() string { return e.Device + ": " + e.Err.Error() }
+
+var errNotFound = errors.New("not found")
