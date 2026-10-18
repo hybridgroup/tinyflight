@@ -14,7 +14,8 @@ func Cos(x float32) float32           { return tinymath.Cos(x) }
 func Abs(x float32) float32           { return tinymath.Abs(x) }
 func SinCos(x float32) (s, c float32) { return tinymath.SinCos(x) }
 
-// Atan2 maps tinymath.Atan2Norm itself, since tinymath.Atan2 v1.2.0 is wrong when y and x are both negative.
+// Atan2 maps tinymath.Atan2Norm itself, since tinymath.Atan2 v1.2.0 is wrong for any negative y.
+// Upstream fix: https://github.com/orsinium-labs/tinymath/pull/2
 func Atan2(y, x float32) float32 {
 	n := tinymath.Atan2Norm(y, x)
 	if n > 2 {

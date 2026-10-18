@@ -75,6 +75,7 @@ func TestAtan2Quadrants(t *testing.T) {
 		{-1, 1, -Pi / 4},
 		{0, -1, Pi},
 		{-0.5, -0.866, -5 * Pi / 6},
+		{-0.3, 0.9, -0.32175055},
 	} {
 		if got := Atan2(c.y, c.x); !near(WrapPi(got-c.want), 0, trigTol) {
 			t.Errorf("Atan2(%v, %v) = %v, want %v", c.y, c.x, got, c.want)
