@@ -1,3 +1,8 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/tinyflight-logo-white.svg">
+  <img alt="tinyflight" src="docs/images/tinyflight-logo.svg" width="400">
+</picture>
+
 # tinyflight
 
 Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). The first supported board is the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1).
