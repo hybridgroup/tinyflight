@@ -37,10 +37,12 @@ func report(f *flight.Flight) {
 		s := f.Status()
 		r, p, y := f.Attitude().Q.Euler()
 		st := f.Stats()
+		m := f.Motors().Value
 		println("armed", s.Armed, "mode", s.Mode.String(), "failsafe", s.Failsafe.String(),
 			"rpy", deg(r), deg(p), deg(y),
 			"z_mm", int(f.Position().Z*1000), "batt_mV", int(f.Battery().Voltage*1000),
-			"overruns", st.Overruns, "step_us", st.MaxStep.Microseconds())
+			"overruns", st.Overruns, "step_us", st.MaxStep.Microseconds(),
+			"motors_fl_fr_rl_rr", milli(m[0]), milli(m[1]), milli(m[2]), milli(m[3]))
 	}
 }
 
@@ -63,3 +65,5 @@ func startOnCores(f *flight.Flight) {
 	machine.AssignCore(1)
 	f.RunDedicated()
 }
+
+func milli(v float32) int { return int(v * 1000) }
