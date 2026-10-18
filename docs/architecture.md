@@ -64,7 +64,7 @@ Hardware specific code lives outside `pkg/`:
 |---|---|
 | `devices/` | Adapters from the TinyGo drivers to the `pkg/hal` interfaces. Any board with the same chips can reuse them. |
 | `boards/stampfly` | Pins, sensor setup, IMU axis rotation, motor order and default gains for the M5Stack StampFly. |
-| `cmd/` | Programs you flash: the firmware and bench tools. |
+| `firmware/` | Programs you flash: the flight firmware and bench tools. |
 | `tools/estimate` | Host-only checks against [go-estimate](https://github.com/milosgajdos/go-estimate). It has its own `go.mod`, so gonum never gets into the firmware. |
 
 ## Why the controllers come in a chain
@@ -128,6 +128,6 @@ The on-board filters are written by hand in float32 with fixed-size arrays. The 
 
 1. Write adapters in `devices/` for any chips that don't have one yet.
 2. Add `boards/<name>`. It should set up the buses, return a `flight.Hardware`, and return a `params.Config` with the right IMU rotation, mixer geometry and gains.
-3. Add `cmd/<name>` with a short `main` that calls the board package and `flight.Run`.
+3. Add `firmware/<name>` with a short `main` that calls the board package and `flight.Run`.
 
 Nothing under `pkg/` should need to change.

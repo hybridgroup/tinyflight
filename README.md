@@ -10,7 +10,7 @@ See [docs/architecture.md](docs/architecture.md) for how it works. See [docs/pro
 pkg/      flight stack, pure Go, runs and tests on a PC
 devices/  adapters from TinyGo drivers to pkg/hal
 boards/   board setup, such as boards/stampfly
-cmd/      firmware and bench tools
+firmware/ firmware and bench tools to flash
 docs/     architecture
 ```
 
@@ -53,9 +53,9 @@ Some pieces aren't merged upstream yet. Until they are, the build needs a TinyGo
 Build with the cores scheduler, so the flight loop gets a core to itself:
 
 ```
-tinygo flash -scheduler=cores -target m5stamp-fly ./cmd/stampfly-sensors
-tinygo flash -scheduler=cores -target m5stamp-fly ./cmd/stampfly-motortest
-tinygo flash -scheduler=cores -target m5stamp-fly ./cmd/stampfly
+tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-sensors
+tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-motortest
+tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly
 ```
 
 ### Commands
