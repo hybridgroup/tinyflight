@@ -6,15 +6,18 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
+// Config holds the attitude gains and rate limits.
 type Config struct {
 	P       fmath.Vec3 // rad/s of rate per rad of error, per axis
 	MaxRate fmath.Vec3 // rad/s
 }
 
+// Controller turns attitude error into a body rate setpoint.
 type Controller struct {
 	cfg Config
 }
 
+// New returns an attitude controller using cfg.
 func New(cfg Config) *Controller { return &Controller{cfg: cfg} }
 
 // Update returns a body rate setpoint in rad/s.

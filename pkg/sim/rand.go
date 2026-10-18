@@ -6,6 +6,7 @@ type Rand struct {
 	state uint32
 }
 
+// NewRand returns a random source. A seed of 0 is changed to 1.
 func NewRand(seed uint32) *Rand {
 	if seed == 0 {
 		seed = 1
@@ -13,6 +14,7 @@ func NewRand(seed uint32) *Rand {
 	return &Rand{state: seed}
 }
 
+// Uint32 returns the next random value.
 func (r *Rand) Uint32() uint32 {
 	x := r.state
 	x ^= x << 13

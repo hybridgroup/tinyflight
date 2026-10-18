@@ -8,6 +8,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 )
 
+// Params holds the physical properties and sensor noise of the simulated quad.
 type Params struct {
 	Mass      float32    // kg
 	Inertia   fmath.Vec3 // kg·m² about each body axis
@@ -70,10 +71,12 @@ type Quad struct {
 	rnd   *Rand
 }
 
+// New returns a level quad resting on the ground.
 func New(p Params) *Quad {
 	return &Quad{P: p, Q: fmath.IdentityQuat(), rnd: NewRand(1)}
 }
 
+// OnGround reports whether the quad is at or below ground level.
 func (s *Quad) OnGround() bool { return s.Pos.Z >= 0 }
 
 // Step advances the physics by dt seconds.
@@ -132,6 +135,7 @@ func (s *Quad) ReadIMU(out *msg.IMUSample) error {
 	return nil
 }
 
+// ReadBaro reports the pressure at the current height with noise added.
 func (s *Quad) ReadBaro(out *msg.BaroSample) error {
 	// Inverse of altitude.BaroHeight, from sea level.
 	const temp = 25
@@ -142,6 +146,7 @@ func (s *Quad) ReadBaro(out *msg.BaroSample) error {
 	return nil
 }
 
+// ReadRange reports the distance to the ground along the body Z axis. It is invalid when tilted too far.
 func (s *Quad) ReadRange(out *msg.RangeSample) error {
 	c := s.Q.Down().Z
 	out.Valid = false
@@ -154,11 +159,13 @@ func (s *Quad) ReadRange(out *msg.RangeSample) error {
 	return nil
 }
 
+// ReadBattery reports the configured voltage.
 func (s *Quad) ReadBattery(out *msg.BatteryStatus) error {
 	out.Voltage = s.P.Voltage
 	return nil
 }
 
+// SetMotors stores the motor commands for the next Step.
 func (s *Quad) SetMotors(m *msg.MotorOutputs) error {
 	for i := range m.Count {
 		s.Cmd[i] = fmath.Clamp(m.Value[i], 0, 1)
@@ -178,6 +185,7 @@ type Pilot struct {
 	Silent bool
 }
 
+// ReadInput delivers In unless Silent is true.
 func (p *Pilot) ReadInput(in *msg.ManualInput) bool {
 	if p.Silent {
 		return false

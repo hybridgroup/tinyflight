@@ -7,14 +7,17 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
+// Config holds the PID settings for each axis.
 type Config struct {
 	Roll, Pitch, Yaw pid.Config
 }
 
+// Controller turns body rate error into a torque request.
 type Controller struct {
 	pids pid.Vec3
 }
 
+// New returns a rate controller with one PID each for roll, pitch and yaw.
 func New(cfg Config) *Controller {
 	return &Controller{pids: pid.NewVec3(cfg.Roll, cfg.Pitch, cfg.Yaw)}
 }

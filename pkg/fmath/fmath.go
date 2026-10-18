@@ -8,10 +8,16 @@ const (
 	Gravity = float32(9.80665)
 )
 
-// Trig functions are float32 approximations from tinymath with a maximum error of about 0.003 rad.
-func Sin(x float32) float32           { return tinymath.Sin(x) }
-func Cos(x float32) float32           { return tinymath.Cos(x) }
-func Abs(x float32) float32           { return tinymath.Abs(x) }
+// Sin returns the sine of x in radians. It uses tinymath with a maximum error of about 0.003.
+func Sin(x float32) float32 { return tinymath.Sin(x) }
+
+// Cos returns the cosine of x in radians. It uses tinymath with a maximum error of about 0.003.
+func Cos(x float32) float32 { return tinymath.Cos(x) }
+
+// Abs returns the absolute value of x.
+func Abs(x float32) float32 { return tinymath.Abs(x) }
+
+// SinCos returns the sine and cosine of x in radians, with the same error as Sin and Cos.
 func SinCos(x float32) (s, c float32) { return tinymath.SinCos(x) }
 
 // Atan2 maps tinymath.Atan2Norm itself, since tinymath.Atan2 v1.2.0 is wrong for any negative y.
@@ -42,6 +48,7 @@ func Sqrt(x float32) float32 {
 	return 0.5 * (y + x/y)
 }
 
+// Clamp limits x to [lo, hi].
 func Clamp(x, lo, hi float32) float32 {
 	if x < lo {
 		return lo
@@ -52,6 +59,7 @@ func Clamp(x, lo, hi float32) float32 {
 	return x
 }
 
+// Min returns the smaller of a and b.
 func Min(a, b float32) float32 {
 	if a < b {
 		return a
@@ -59,6 +67,7 @@ func Min(a, b float32) float32 {
 	return b
 }
 
+// Max returns the larger of a and b.
 func Max(a, b float32) float32 {
 	if a > b {
 		return a
@@ -77,7 +86,10 @@ func WrapPi(a float32) float32 {
 	return a
 }
 
+// Radians converts degrees to radians.
 func Radians(deg float32) float32 { return deg * Pi / 180 }
+
+// Degrees converts radians to degrees.
 func Degrees(rad float32) float32 { return rad * 180 / Pi }
 
 // Deadband returns 0 inside [-band, band] and rescales the rest back to [-1, 1].

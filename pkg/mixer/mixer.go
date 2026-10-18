@@ -22,6 +22,7 @@ var QuadX = []Motor{
 	{Roll: -1, Pitch: -1, Yaw: -1},
 }
 
+// Config holds the motor layout and thrust settings.
 type Config struct {
 	Geometry []Motor
 	// ThrustModel is 0 for thrust linear in command and 1 for thrust proportional to command squared.
@@ -31,13 +32,16 @@ type Config struct {
 	AirMode     bool    // raise thrust at low throttle to keep full torque authority
 }
 
+// Mixer turns thrust and torque into motor commands.
 type Mixer struct {
 	cfg Config
 	rp  [msg.MaxMotors]float32
 }
 
+// New returns a mixer using cfg.
 func New(cfg Config) *Mixer { return &Mixer{cfg: cfg} }
 
+// Count returns the number of motors.
 func (m *Mixer) Count() int { return len(m.cfg.Geometry) }
 
 // Mix fills out with motor commands from 0 to 1. Roll and pitch win over thrust, thrust wins over yaw.

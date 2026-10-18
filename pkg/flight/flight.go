@@ -43,6 +43,7 @@ type Stats struct {
 
 const maxIMUErrors = 20
 
+// Flight runs the whole flight stack from sensor reads to motor outputs.
 type Flight struct {
 	cfg params.Config
 	hw  Hardware
@@ -86,6 +87,7 @@ type Flight struct {
 	led   [3]uint8
 }
 
+// New sets up the flight stack on hw and starts the gyro calibration.
 func New(hw Hardware, cfg params.Config) *Flight {
 	f := &Flight{
 		cfg:     cfg,
@@ -106,21 +108,49 @@ func New(hw Hardware, cfg params.Config) *Flight {
 	return f
 }
 
-func (f *Flight) Status() msg.VehicleStatus      { return f.status }
-func (f *Flight) Attitude() msg.Attitude         { return f.att }
-func (f *Flight) Position() msg.LocalPosition    { return f.pos }
-func (f *Flight) Motors() msg.MotorOutputs       { return f.motors }
-func (f *Flight) Input() msg.ManualInput         { return f.input }
-func (f *Flight) IMU() msg.IMUSample             { return f.imuS }
-func (f *Flight) Battery() msg.BatteryStatus     { return f.batt }
-func (f *Flight) Range() msg.RangeSample         { return f.rng }
-func (f *Flight) Baro() msg.BaroSample           { return f.baro }
-func (f *Flight) Mag() msg.MagSample             { return f.magS }
-func (f *Flight) Flow() msg.FlowSample           { return f.flow }
-func (f *Flight) Setpoint() msg.RateSetpoint     { return f.rateSp }
-func (f *Flight) ThrustTorque() msg.ThrustTorque { return f.tt }
-func (f *Flight) Calibrated() bool               { return f.imu.Calibrated() }
+// Status returns the latest vehicle status.
+func (f *Flight) Status() msg.VehicleStatus { return f.status }
 
+// Attitude returns the latest attitude estimate.
+func (f *Flight) Attitude() msg.Attitude { return f.att }
+
+// Position returns the latest local position estimate.
+func (f *Flight) Position() msg.LocalPosition { return f.pos }
+
+// Motors returns the last motor commands.
+func (f *Flight) Motors() msg.MotorOutputs { return f.motors }
+
+// Input returns the latest pilot input.
+func (f *Flight) Input() msg.ManualInput { return f.input }
+
+// IMU returns the latest filtered IMU sample in the body frame.
+func (f *Flight) IMU() msg.IMUSample { return f.imuS }
+
+// Battery returns the latest battery reading.
+func (f *Flight) Battery() msg.BatteryStatus { return f.batt }
+
+// Range returns the latest downward range reading.
+func (f *Flight) Range() msg.RangeSample { return f.rng }
+
+// Baro returns the latest baro reading.
+func (f *Flight) Baro() msg.BaroSample { return f.baro }
+
+// Mag returns the latest magnetometer reading.
+func (f *Flight) Mag() msg.MagSample { return f.magS }
+
+// Flow returns the latest optical flow reading.
+func (f *Flight) Flow() msg.FlowSample { return f.flow }
+
+// Setpoint returns the latest body rate setpoint.
+func (f *Flight) Setpoint() msg.RateSetpoint { return f.rateSp }
+
+// ThrustTorque returns the latest thrust and torque request sent to the mixer.
+func (f *Flight) ThrustTorque() msg.ThrustTorque { return f.tt }
+
+// Calibrated reports whether the gyro calibration is done.
+func (f *Flight) Calibrated() bool { return f.imu.Calibrated() }
+
+// Stats returns loop timing and error counts.
 func (f *Flight) Stats() Stats {
 	s := f.stats
 	s.SensorErrors = f.slow.errors.Load()

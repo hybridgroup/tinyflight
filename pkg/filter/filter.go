@@ -12,6 +12,7 @@ type LowPass1 struct {
 	init  bool
 }
 
+// NewLowPass1 returns a first order low-pass for cutoffHz at a rate of sampleHz.
 func NewLowPass1(cutoffHz, sampleHz float32) LowPass1 {
 	f := LowPass1{alpha: 1}
 	if cutoffHz > 0 && sampleHz > 0 {
@@ -22,6 +23,7 @@ func NewLowPass1(cutoffHz, sampleHz float32) LowPass1 {
 	return f
 }
 
+// Apply filters x and returns the output. The first value passes through unchanged.
 func (f *LowPass1) Apply(x float32) float32 {
 	if !f.init {
 		f.y, f.init = x, true
@@ -31,8 +33,11 @@ func (f *LowPass1) Apply(x float32) float32 {
 	return f.y
 }
 
+// Value returns the last output.
 func (f *LowPass1) Value() float32 { return f.y }
-func (f *LowPass1) Reset()         { f.init = false }
+
+// Reset makes the next Apply start over from its input.
+func (f *LowPass1) Reset() { f.init = false }
 
 // Biquad is a second order filter, used as a low-pass or a notch.
 // Coefficients follow the RBJ Audio EQ Cookbook, https://www.w3.org/TR/audio-eq-cookbook/
@@ -93,6 +98,7 @@ func sinCos(w float32) (sn, cs float32) {
 	return sn, cs
 }
 
+// Apply filters x and returns the output.
 func (f *Biquad) Apply(x float32) float32 {
 	if f.pass {
 		return x
@@ -116,11 +122,13 @@ func (f *Biquad) Reset(x float32) {
 // LowPass1Vec3 filters each axis of a vector.
 type LowPass1Vec3 [3]LowPass1
 
+// NewLowPass1Vec3 returns a first order low-pass for each axis.
 func NewLowPass1Vec3(cutoffHz, sampleHz float32) LowPass1Vec3 {
 	f := NewLowPass1(cutoffHz, sampleHz)
 	return LowPass1Vec3{f, f, f}
 }
 
+// Apply filters each axis of v.
 func (f *LowPass1Vec3) Apply(v fmath.Vec3) fmath.Vec3 {
 	return fmath.Vec3{X: f[0].Apply(v.X), Y: f[1].Apply(v.Y), Z: f[2].Apply(v.Z)}
 }
@@ -128,8 +136,10 @@ func (f *LowPass1Vec3) Apply(v fmath.Vec3) fmath.Vec3 {
 // BiquadVec3 filters each axis of a vector.
 type BiquadVec3 [3]Biquad
 
+// NewBiquadVec3 uses a copy of f for each axis.
 func NewBiquadVec3(f Biquad) BiquadVec3 { return BiquadVec3{f, f, f} }
 
+// Apply filters each axis of v.
 func (f *BiquadVec3) Apply(v fmath.Vec3) fmath.Vec3 {
 	return fmath.Vec3{X: f[0].Apply(v.X), Y: f[1].Apply(v.Y), Z: f[2].Apply(v.Z)}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
+// Config holds the Mahony filter gains.
 type Config struct {
 	Kp        float32 // how fast accel and mag pull the estimate back
 	Ki        float32 // how fast gyro bias is learned
@@ -13,6 +14,7 @@ type Config struct {
 	UseMag    bool
 }
 
+// Mahony estimates orientation from gyro, accel and optional mag readings.
 type Mahony struct {
 	cfg      Config
 	q        fmath.Quat
@@ -22,10 +24,12 @@ type Mahony struct {
 	init     bool
 }
 
+// New returns a Mahony filter that starts level.
 func New(cfg Config) *Mahony {
 	return &Mahony{cfg: cfg, q: fmath.IdentityQuat()}
 }
 
+// Attitude returns the current orientation estimate.
 func (m *Mahony) Attitude() fmath.Quat { return m.q }
 
 // Reset sets roll and pitch from a still accelerometer reading and yaw to 0.

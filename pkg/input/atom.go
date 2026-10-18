@@ -39,6 +39,7 @@ func NewAtomJoystick(mac [6]byte) *AtomJoystick {
 	return &AtomJoystick{mac: [3]byte{mac[3], mac[4], mac[5]}}
 }
 
+// Decode checks a packet is for this vehicle and turns it into pilot input stamped with now.
 func (a *AtomJoystick) Decode(data []byte, now msg.Time, out *msg.ManualInput) error {
 	if len(data) < AtomPacketSize {
 		return ErrShort

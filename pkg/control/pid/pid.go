@@ -7,6 +7,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
+// Config holds the gains and limits for one PID.
 type Config struct {
 	P, I, D       float32
 	FF            float32 // feedforward, output added straight from the setpoint
@@ -16,6 +17,7 @@ type Config struct {
 	SampleHz      float32
 }
 
+// PID is a single axis PID controller with a filtered D term and integral anti windup.
 type PID struct {
 	cfg      Config
 	integral float32
@@ -24,16 +26,19 @@ type PID struct {
 	dFilter  filter.LowPass1
 }
 
+// New returns a PID controller using cfg.
 func New(cfg Config) PID {
 	return PID{cfg: cfg, dFilter: filter.NewLowPass1(cfg.DCutoffHz, cfg.SampleHz)}
 }
 
+// Reset clears the integral and derivative state.
 func (c *PID) Reset() {
 	c.integral = 0
 	c.hasPrev = false
 	c.dFilter.Reset()
 }
 
+// Integral returns the current output held by the I term.
 func (c *PID) Integral() float32 { return c.integral }
 
 // Update returns the output for one step of dt seconds.
@@ -63,8 +68,10 @@ func (c *PID) Update(setpoint, measured, dt float32) float32 {
 // Vec3 runs one PID per axis, such as roll, pitch and yaw.
 type Vec3 [3]PID
 
+// NewVec3 returns one PID per axis, each with its own config.
 func NewVec3(x, y, z Config) Vec3 { return Vec3{New(x), New(y), New(z)} }
 
+// Update runs each axis PID for one step of dt seconds.
 func (v *Vec3) Update(setpoint, measured fmath.Vec3, dt float32) fmath.Vec3 {
 	return fmath.Vec3{
 		X: v[0].Update(setpoint.X, measured.X, dt),
@@ -73,6 +80,7 @@ func (v *Vec3) Update(setpoint, measured fmath.Vec3, dt float32) fmath.Vec3 {
 	}
 }
 
+// Reset clears the state of every axis.
 func (v *Vec3) Reset() {
 	for i := range v {
 		v[i].Reset()

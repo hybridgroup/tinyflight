@@ -7,6 +7,7 @@ import "github.com/hybridgroup/tinyflight/pkg/fmath"
 // Time is microseconds since boot.
 type Time uint64
 
+// IMUSample is one accel and gyro reading.
 type IMUSample struct {
 	Time        Time
 	Accel       fmath.Vec3 // m/s², reads (0, 0, -9.8) when level and still
@@ -14,23 +15,27 @@ type IMUSample struct {
 	Temperature float32    // °C
 }
 
+// MagSample is one magnetic field reading.
 type MagSample struct {
 	Time  Time
 	Field fmath.Vec3 // µT
 }
 
+// BaroSample is one pressure and temperature reading.
 type BaroSample struct {
 	Time        Time
 	Pressure    float32 // Pa
 	Temperature float32 // °C
 }
 
+// RangeSample is one distance reading from the rangefinder.
 type RangeSample struct {
 	Time     Time
 	Distance float32 // m
 	Valid    bool
 }
 
+// FlowSample is the optical flow motion since the last reading.
 type FlowSample struct {
 	Time    Time
 	DeltaX  int16 // raw sensor counts
@@ -39,18 +44,21 @@ type FlowSample struct {
 	Valid   bool
 }
 
+// BatteryStatus is one battery voltage and current reading.
 type BatteryStatus struct {
 	Time    Time
 	Voltage float32 // V
 	Current float32 // A
 }
 
+// Attitude is the estimated orientation and body rate.
 type Attitude struct {
 	Time Time
 	Q    fmath.Quat
 	Rate fmath.Vec3 // rad/s, filtered body rate
 }
 
+// LocalPosition is the estimated height and vertical speed relative to the takeoff point.
 type LocalPosition struct {
 	Time    Time
 	Z       float32 // m, negative is above the takeoff point
@@ -61,11 +69,13 @@ type LocalPosition struct {
 	AccBias float32 // m/s², estimated vertical accel bias
 }
 
+// RateSetpoint is the wanted body rate and thrust.
 type RateSetpoint struct {
 	Rate   fmath.Vec3 // rad/s
 	Thrust float32    // 0 to 1
 }
 
+// AttitudeSetpoint is the wanted orientation, yaw rate and thrust.
 type AttitudeSetpoint struct {
 	Q       fmath.Quat
 	YawRate float32 // rad/s feedforward
@@ -80,11 +90,13 @@ type ThrustTorque struct {
 
 const MaxMotors = 8
 
+// MotorOutputs holds one command per motor.
 type MotorOutputs struct {
 	Count int
 	Value [MaxMotors]float32 // 0 to 1
 }
 
+// FlightMode selects how pilot input is used.
 type FlightMode uint8
 
 const (
@@ -93,6 +105,7 @@ const (
 	ModeAltHold
 )
 
+// String returns the mode name.
 func (m FlightMode) String() string {
 	switch m {
 	case ModeAcro:
@@ -118,6 +131,7 @@ type ManualInput struct {
 	Valid    bool
 }
 
+// Failsafe is the reason for the last automatic landing or disarm.
 type Failsafe uint8
 
 const (
@@ -127,6 +141,7 @@ const (
 	FailsafeTilt
 )
 
+// String returns the failsafe name.
 func (f Failsafe) String() string {
 	switch f {
 	case FailsafeNone:
@@ -141,6 +156,7 @@ func (f Failsafe) String() string {
 	return "unknown"
 }
 
+// VehicleStatus is the arm state, flight mode and failsafe state.
 type VehicleStatus struct {
 	Time     Time
 	Armed    bool

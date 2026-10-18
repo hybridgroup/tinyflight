@@ -5,6 +5,7 @@ type Quat struct {
 	W, X, Y, Z float32
 }
 
+// IdentityQuat returns the quaternion for no rotation.
 func IdentityQuat() Quat { return Quat{W: 1} }
 
 // QuatFromEuler builds a rotation from roll, pitch and yaw in radians, applied in yaw, pitch, roll order.
@@ -34,6 +35,7 @@ func (q Quat) Yaw() float32 {
 	return Atan2(2*(q.W*q.Z+q.X*q.Y), 1-2*(q.Y*q.Y+q.Z*q.Z))
 }
 
+// Mul returns the product q times p, which applies p first and then q.
 func (q Quat) Mul(p Quat) Quat {
 	return Quat{
 		W: q.W*p.W - q.X*p.X - q.Y*p.Y - q.Z*p.Z,
@@ -43,8 +45,10 @@ func (q Quat) Mul(p Quat) Quat {
 	}
 }
 
+// Conj returns the conjugate of q, which is its inverse for a unit quaternion.
 func (q Quat) Conj() Quat { return Quat{q.W, -q.X, -q.Y, -q.Z} }
 
+// Normalized returns q scaled to unit length, or the identity if q is zero.
 func (q Quat) Normalized() Quat {
 	n := Sqrt(q.W*q.W + q.X*q.X + q.Y*q.Y + q.Z*q.Z)
 	if n == 0 {

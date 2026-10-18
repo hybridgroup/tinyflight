@@ -14,6 +14,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/sensors"
 )
 
+// Config holds the settings for every part of the flight stack.
 type Config struct {
 	LoopHz    float32
 	Sensors   sensors.Config

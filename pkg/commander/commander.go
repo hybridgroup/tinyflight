@@ -6,6 +6,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 )
 
+// Config holds the failsafe and arming limits.
 type Config struct {
 	InputTimeout   float32 // s without pilot input before landing
 	LowBattery     float32 // V
@@ -25,6 +26,7 @@ type State struct {
 	Ready   bool // sensors are calibrated
 }
 
+// Commander tracks the arm state, flight mode and failsafes.
 type Commander struct {
 	cfg       Config
 	status    msg.VehicleStatus
@@ -34,8 +36,10 @@ type Commander struct {
 	landStart msg.Time
 }
 
+// New returns a Commander that starts disarmed.
 func New(cfg Config) *Commander { return &Commander{cfg: cfg} }
 
+// Status returns the vehicle status from the last Update.
 func (c *Commander) Status() msg.VehicleStatus { return c.status }
 
 // LandingElapsed returns seconds since a failsafe landing began.
@@ -46,6 +50,7 @@ func (c *Commander) LandingElapsed(now msg.Time) float32 {
 	return seconds(now - c.landStart)
 }
 
+// Update handles arming, mode changes and failsafes for one step and returns the new status.
 func (c *Commander) Update(s State) msg.VehicleStatus {
 	in := s.Input
 	st := &c.status

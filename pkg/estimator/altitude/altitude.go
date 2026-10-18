@@ -6,6 +6,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
+// Config holds the noise and gating settings for the filter.
 type Config struct {
 	AccelNoise float32 // m/s², accel noise density used in the prediction
 	BiasNoise  float32 // m/s², how fast the accel bias may wander per second
@@ -30,6 +31,7 @@ type Filter struct {
 	rangeAge    float32
 }
 
+// New returns a filter at zero height.
 func New(cfg Config) *Filter {
 	f := &Filter{cfg: cfg}
 	f.Reset()
@@ -45,8 +47,13 @@ func (f *Filter) Reset() {
 	f.rangeAge = f.cfg.RangeHold + 1
 }
 
-func (f *Filter) Z() float32    { return f.x[0] }
-func (f *Filter) VZ() float32   { return f.x[1] }
+// Z returns the height in m, NED so up is negative.
+func (f *Filter) Z() float32 { return f.x[0] }
+
+// VZ returns the vertical speed in m/s, NED so climbing is negative.
+func (f *Filter) VZ() float32 { return f.x[1] }
+
+// Bias returns the estimated vertical accel bias in m/s².
 func (f *Filter) Bias() float32 { return f.x[2] }
 
 // RangeActive reports whether a recent range reading is driving the height.

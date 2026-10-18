@@ -7,6 +7,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
+// Config holds the height and climb rate gains and limits.
 type Config struct {
 	ZP          float32 // m/s of climb rate per m of height error
 	Climb       pid.Config
@@ -17,15 +18,18 @@ type Config struct {
 	MaxThrust   float32
 }
 
+// Vertical turns a height setpoint into collective thrust.
 type Vertical struct {
 	cfg   Config
 	climb pid.PID
 }
 
+// NewVertical returns a height controller using cfg.
 func NewVertical(cfg Config) *Vertical {
 	return &Vertical{cfg: cfg, climb: pid.New(cfg.Climb)}
 }
 
+// Reset clears the climb rate integrator.
 func (c *Vertical) Reset() { c.climb.Reset() }
 
 // Update returns collective thrust from 0 to 1. Heights and speeds are NED, so up is negative.

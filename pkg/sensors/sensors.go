@@ -8,6 +8,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 )
 
+// Config holds the sensor axes, offsets, filters and calibration settings.
 type Config struct {
 	Rotation      fmath.Mat3 // IMU chip axes to body axes
 	MagRotation   fmath.Mat3 // mag chip axes to body axes
@@ -23,6 +24,7 @@ type Config struct {
 	StillThreshold     float32 // rad/s, gyro spread allowed while calibrating
 }
 
+// IMU turns raw IMU samples into filtered body frame samples.
 type IMU struct {
 	cfg        Config
 	gyroLPF    filter.BiquadVec3
@@ -38,6 +40,7 @@ type IMU struct {
 	calibrating bool
 }
 
+// NewIMU returns an IMU processor with filters set up from cfg.
 func NewIMU(cfg Config) *IMU {
 	return &IMU{
 		cfg:       cfg,
@@ -54,8 +57,10 @@ func (p *IMU) Calibrate() {
 	p.calSum = fmath.Vec3{}
 }
 
+// Calibrated reports whether the gyro bias has been measured.
 func (p *IMU) Calibrated() bool { return p.calibrated }
 
+// GyroBias returns the measured gyro bias in rad/s.
 func (p *IMU) GyroBias() fmath.Vec3 { return p.gyroBias }
 
 // Update turns a raw sample into a body frame sample with bias removed and noise filtered.
