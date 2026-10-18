@@ -17,7 +17,8 @@ func TestResetFromAccel(t *testing.T) {
 	m := New(Config{Kp: 1, AccelGate: 0.2})
 	m.Reset(stillAccel(truth))
 	r, p, _ := m.Attitude().Euler()
-	if fmath.Abs(r-0.3) > 1e-4 || fmath.Abs(p+0.2) > 1e-4 {
+	// Four approximate trig steps from truth to result, each good to about 0.003 rad.
+	if fmath.Abs(r-0.3) > 0.01 || fmath.Abs(p+0.2) > 0.01 {
 		t.Errorf("reset gave roll %v pitch %v", r, p)
 	}
 }

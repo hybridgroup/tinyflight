@@ -9,15 +9,16 @@ func IdentityQuat() Quat { return Quat{W: 1} }
 
 // QuatFromEuler builds a rotation from roll, pitch and yaw in radians, applied in yaw, pitch, roll order.
 func QuatFromEuler(roll, pitch, yaw float32) Quat {
-	cr, sr := Cos(roll/2), Sin(roll/2)
-	cp, sp := Cos(pitch/2), Sin(pitch/2)
-	cy, sy := Cos(yaw/2), Sin(yaw/2)
+	sr, cr := SinCos(roll / 2)
+	sp, cp := SinCos(pitch / 2)
+	sy, cy := SinCos(yaw / 2)
+	// Normalized because approximate sin and cos are not exactly on the unit circle.
 	return Quat{
 		W: cr*cp*cy + sr*sp*sy,
 		X: sr*cp*cy - cr*sp*sy,
 		Y: cr*sp*cy + sr*cp*sy,
 		Z: cr*cp*sy - sr*sp*cy,
-	}
+	}.Normalized()
 }
 
 // Euler returns roll, pitch and yaw in radians.

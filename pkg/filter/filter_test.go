@@ -1,8 +1,9 @@
 package filter
 
 import (
-	"math"
 	"testing"
+
+	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
 // amplitude runs a sine through f and returns the output amplitude after settling.
@@ -10,7 +11,7 @@ func amplitude(apply func(float32) float32, freq, fs float32) float32 {
 	var peak float32
 	n := int(fs * 4)
 	for i := range n {
-		y := apply(float32(math.Sin(2 * math.Pi * float64(freq) * float64(i) / float64(fs))))
+		y := apply(fmath.Sin(fmath.WrapPi(2 * fmath.Pi * freq * float32(i) / fs)))
 		if i > n/2 && y > peak {
 			peak = y
 		}
@@ -23,7 +24,7 @@ func TestLowPass1(t *testing.T) {
 	for range 1000 {
 		f.Apply(1)
 	}
-	if v := f.Value(); math.Abs(float64(v-1)) > 1e-3 {
+	if v := f.Value(); fmath.Abs(v-1) > 1e-3 {
 		t.Errorf("step settled at %v", v)
 	}
 	g := NewLowPass1(10, 1000)
@@ -64,7 +65,32 @@ func TestPassThrough(t *testing.T) {
 		t.Error("disabled filter changed value")
 	}
 	g := NewLowPass2(100, 1000)
-	if v := g.Apply(5); math.Abs(float64(v-5)) > 1e-5 {
+	if v := g.Apply(5); fmath.Abs(v-5) > 1e-5 {
 		t.Errorf("first sample %v, want 5", v)
+	}
+}
+
+func TestSinCosAccuracy(t *testing.T) {
+	for _, c := range [][3]float32{
+		{0.0157, 0.01569936, 0.99987676},
+		{0.5, 0.47942554, 0.87758256},
+		{1.5707964, 1, 0},
+		{3.1415927, 0, -1},
+	} {
+		sn, cs := sinCos(c[0])
+		if fmath.Abs(sn-c[1]) > 1e-6 || fmath.Abs(cs-c[2]) > 1e-6 {
+			t.Errorf("sinCos(%v) = %v %v, want %v %v", c[0], sn, cs, c[1], c[2])
+		}
+	}
+}
+
+func TestLowCutoff(t *testing.T) {
+	f := NewLowPass2(1, 400)
+	if a := amplitude(f.Apply, 0.1, 400); a < 0.95 {
+		t.Errorf("0.1 Hz through a 1 Hz low-pass gave %v", a)
+	}
+	f = NewLowPass2(1, 400)
+	if a := amplitude(f.Apply, 20, 400); a > 0.01 {
+		t.Errorf("20 Hz through a 1 Hz low-pass gave %v", a)
 	}
 }

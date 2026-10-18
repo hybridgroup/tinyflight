@@ -1,25 +1,45 @@
 // Package fmath has small float32 math helpers for vectors, rotations and limits.
 package fmath
 
-import "math"
+import "github.com/orsinium-labs/tinymath"
 
 const (
-	Pi      = float32(math.Pi)
+	Pi      = float32(tinymath.Pi)
 	Gravity = float32(9.80665)
 )
 
-func Sqrt(x float32) float32 { return float32(math.Sqrt(float64(x))) }
-func Sin(x float32) float32  { return float32(math.Sin(float64(x))) }
-func Cos(x float32) float32  { return float32(math.Cos(float64(x))) }
-func Tan(x float32) float32  { return float32(math.Tan(float64(x))) }
-func Abs(x float32) float32  { return float32(math.Abs(float64(x))) }
+// Trig functions are float32 approximations from tinymath with a maximum error of about 0.003 rad.
+func Sin(x float32) float32           { return tinymath.Sin(x) }
+func Cos(x float32) float32           { return tinymath.Cos(x) }
+func Abs(x float32) float32           { return tinymath.Abs(x) }
+func SinCos(x float32) (s, c float32) { return tinymath.SinCos(x) }
 
-func Atan2(y, x float32) float32 { return float32(math.Atan2(float64(y), float64(x))) }
+// Atan2 maps tinymath.Atan2Norm itself, since tinymath.Atan2 v1.2.0 is wrong when y and x are both negative.
+func Atan2(y, x float32) float32 {
+	n := tinymath.Atan2Norm(y, x)
+	if n > 2 {
+		n -= 4
+	}
+	return Pi / 2 * n
+}
 
-// Asin clamps its input to [-1, 1] so rounding errors do not produce NaN.
-func Asin(x float32) float32 { return float32(math.Asin(float64(Clamp(x, -1, 1)))) }
+// Asin uses Atan2 and Sqrt, since tinymath.Asin uses a rough inverse square root and is off by up to 0.018 rad.
+func Asin(x float32) float32 {
+	x = Clamp(x, -1, 1)
+	return Atan2(x, Sqrt(1-x*x))
+}
 
-func Pow(x, y float32) float32 { return float32(math.Pow(float64(x), float64(y))) }
+// Sqrt refines the tinymath estimate, which is off by up to about 6%, with three Newton steps.
+// See https://en.wikipedia.org/wiki/Newton%27s_method#Square_root
+func Sqrt(x float32) float32 {
+	if x <= 0 {
+		return 0
+	}
+	y := tinymath.Sqrt(x)
+	y = 0.5 * (y + x/y)
+	y = 0.5 * (y + x/y)
+	return 0.5 * (y + x/y)
+}
 
 func Clamp(x, lo, hi float32) float32 {
 	if x < lo {

@@ -75,6 +75,7 @@ type Flight struct {
 	yawSp    float32
 	zSp      float32
 	landFrom float32
+	baroRef  float32 // Pa, first baro reading, heights are measured from it
 	landing  bool
 	imuFails int
 
@@ -163,8 +164,19 @@ func (f *Flight) run(spin bool) {
 	}
 }
 
+var Prof [8]time.Duration
+
+func mark(i int, t *time.Time) {
+	n := time.Now()
+	if d := n.Sub(*t); d > Prof[i] {
+		Prof[i] = d
+	}
+	*t = n
+}
+
 // Step runs one pass of the loop at time now in microseconds.
 func (f *Flight) Step(now msg.Time) {
+	pt := time.Now()
 	f.stats.Ticks++
 	nominal := 1 / f.cfg.LoopHz
 	dt := nominal
@@ -176,12 +188,17 @@ func (f *Flight) Step(now msg.Time) {
 	if !f.readIMU(now) {
 		return
 	}
+	mark(0, &pt)
 	if f.hw.Input.ReadInput(&f.input) {
 		f.input.Time = now
 	}
+	mark(1, &pt)
 	f.runLoopSensors(now)
+	mark(2, &pt)
 	f.applySlowSensors()
+	mark(3, &pt)
 	f.estimate(dt)
+	mark(4, &pt)
 
 	wasArmed := f.status.Armed
 	f.status = f.cmd.Update(commander.State{
@@ -201,7 +218,9 @@ func (f *Flight) Step(now msg.Time) {
 	default:
 		f.control(now, dt)
 	}
+	mark(5, &pt)
 	f.hw.Motors.SetMotors(&f.motors)
+	mark(6, &pt)
 	f.updateLED()
 }
 

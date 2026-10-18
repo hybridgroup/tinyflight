@@ -14,6 +14,8 @@ github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 h1:DACJavvAHhabrF0
 github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0/go.mod h1:E/TSTwGwJL78qG/PmXZO1EjYhfJinVAhrmmHX6Z8B9k=
 github.com/milosgajdos/go-estimate v0.1.2 h1:05QVfDnCwQPtZ1LEUP2jWBjLV7z2e/ucy9YEdudixpM=
 github.com/milosgajdos/go-estimate v0.1.2/go.mod h1:t0egjYmfFfoOCEZyi1mOvXK87IrBDRz/emNOs0PUKaU=
+github.com/orsinium-labs/tinymath v1.2.0 h1:mxbQzDQz00XQvPqPmIRCgXvYMyPCgCng1kYWfvjXr6M=
+github.com/orsinium-labs/tinymath v1.2.0/go.mod h1:WPXX6ei3KSXG7JfA03a+ekCYaY9SWN4I+JRl2p6ck+A=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=

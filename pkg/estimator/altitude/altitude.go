@@ -140,8 +140,11 @@ func (f *Filter) update(z, sd float32) bool {
 	return true
 }
 
-// PressureToAltitude converts pressure in Pa to height above sea level in m with the standard atmosphere.
-// See https://en.wikipedia.org/wiki/Barometric_formula
-func PressureToAltitude(pa float32) float32 {
-	return 44330 * (1 - fmath.Pow(pa/101325, 1/5.255))
+// BaroHeight returns the height in m of pressure pa above reference pressure ref, both in Pa, at tempC °C.
+// Hypsometric equation with ln(ref/pa) ≈ 2(ref-pa)/(ref+pa), under 0.2% off within 1 km.
+// See https://en.wikipedia.org/wiki/Hypsometric_equation
+func BaroHeight(pa, ref, tempC float32) float32 {
+	const rd = 287.05 // J/(kg·K), specific gas constant of dry air
+	scale := rd * (tempC + 273.15) / fmath.Gravity
+	return scale * 2 * (ref - pa) / (ref + pa)
 }

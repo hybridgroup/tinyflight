@@ -2,8 +2,6 @@
 package filter
 
 import (
-	"math"
-
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
@@ -49,7 +47,7 @@ func NewLowPass2(cutoffHz, sampleHz float32) Biquad {
 	if cutoffHz <= 0 || sampleHz <= 0 || cutoffHz >= sampleHz/2 {
 		return Biquad{pass: true}
 	}
-	cs, alpha := coeffs(cutoffHz, sampleHz, 1/math.Sqrt2)
+	cs, alpha := coeffs(cutoffHz, sampleHz, 0.70710678)
 	a0 := 1 + alpha
 	return Biquad{
 		b0: (1 - cs) / 2 / a0,
@@ -65,7 +63,7 @@ func NewNotch(centerHz, q, sampleHz float32) Biquad {
 	if centerHz <= 0 || sampleHz <= 0 || q <= 0 || centerHz >= sampleHz/2 {
 		return Biquad{pass: true}
 	}
-	cs, alpha := coeffs(centerHz, sampleHz, float64(q))
+	cs, alpha := coeffs(centerHz, sampleHz, q)
 	a0 := 1 + alpha
 	return Biquad{
 		b0: 1 / a0,
@@ -76,9 +74,23 @@ func NewNotch(centerHz, q, sampleHz float32) Biquad {
 	}
 }
 
-func coeffs(f, fs float32, q float64) (cs, alpha float32) {
-	w := 2 * math.Pi * float64(f) / float64(fs)
-	return float32(math.Cos(w)), float32(math.Sin(w) / (2 * q))
+func coeffs(f, fs, q float32) (cs, alpha float32) {
+	sn, cs := sinCos(2 * fmath.Pi * f / fs)
+	return cs, sn / (2 * q)
+}
+
+// sinCos is accurate to about 1e-7 for |w| up to Pi, unlike the fast trig in fmath.
+// Low cutoffs depend on 1-cos(w), which is too small for an approximation. Setup only.
+func sinCos(w float32) (sn, cs float32) {
+	// Taylor series on w/4, then the double angle formulas twice.
+	x := w / 4
+	x2 := x * x
+	sn = x * (1 - x2/6*(1-x2/20*(1-x2/42*(1-x2/72))))
+	cs = 1 - x2/2*(1-x2/12*(1-x2/30*(1-x2/56)))
+	for range 2 {
+		sn, cs = 2*sn*cs, cs*cs-sn*sn
+	}
+	return sn, cs
 }
 
 func (f *Biquad) Apply(x float32) float32 {

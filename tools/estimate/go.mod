@@ -1,6 +1,6 @@
 module github.com/hybridgroup/tinyflight/tools/estimate
 
-go 1.22.1
+go 1.24.4
 
 replace github.com/hybridgroup/tinyflight => ../..
 
@@ -11,6 +11,7 @@ require (
 )
 
 require (
+	github.com/orsinium-labs/tinymath v1.2.0 // indirect
 	golang.org/x/exp v0.0.0-20210526181343-b47a03e3048a // indirect
 	golang.org/x/tools v0.1.12 // indirect
 )

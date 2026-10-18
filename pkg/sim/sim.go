@@ -3,8 +3,6 @@
 package sim
 
 import (
-	"math/rand"
-
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/mixer"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
@@ -69,11 +67,11 @@ type Quad struct {
 	IMUFail bool
 
 	accel fmath.Vec3
-	rnd   *rand.Rand
+	rnd   *Rand
 }
 
 func New(p Params) *Quad {
-	return &Quad{P: p, Q: fmath.IdentityQuat(), rnd: rand.New(rand.NewSource(1))}
+	return &Quad{P: p, Q: fmath.IdentityQuat(), rnd: NewRand(1)}
 }
 
 func (s *Quad) OnGround() bool { return s.Pos.Z >= 0 }
@@ -116,7 +114,7 @@ func (s *Quad) Step(dt float32) {
 	}
 }
 
-func (s *Quad) noise(sd float32) float32 { return float32(s.rnd.NormFloat64()) * sd }
+func (s *Quad) noise(sd float32) float32 { return s.rnd.Normal() * sd }
 
 func (s *Quad) noiseVec(sd float32) fmath.Vec3 {
 	return fmath.Vec3{X: s.noise(sd), Y: s.noise(sd), Z: s.noise(sd)}
@@ -135,9 +133,12 @@ func (s *Quad) ReadIMU(out *msg.IMUSample) error {
 }
 
 func (s *Quad) ReadBaro(out *msg.BaroSample) error {
-	alt := s.P.GroundAlt - s.Pos.Z
-	out.Pressure = s.P.SeaLevelPa*fmath.Pow(1-alt/44330, 5.255) + s.noise(s.P.BaroNoise)
-	out.Temperature = 25
+	// Inverse of altitude.BaroHeight, from sea level.
+	const temp = 25
+	scale := 287.05 * (temp + 273.15) / fmath.Gravity
+	h := s.P.GroundAlt - s.Pos.Z
+	out.Pressure = s.P.SeaLevelPa*(2*scale-h)/(2*scale+h) + s.noise(s.P.BaroNoise)
+	out.Temperature = temp
 	return nil
 }
 

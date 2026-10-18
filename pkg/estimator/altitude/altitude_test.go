@@ -1,11 +1,10 @@
 package altitude
 
 import (
-	"math"
-	"math/rand"
 	"testing"
 
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
+	"github.com/hybridgroup/tinyflight/pkg/sim"
 )
 
 func testConfig() Config {
@@ -22,37 +21,38 @@ func testConfig() Config {
 }
 
 // truth is a climb to 1 m with a slow bob, as height up in m and vertical accel up in m/s².
-func truth(t float64) (h, a float64) {
-	w := 2 * math.Pi * 0.2
-	h = 1 - math.Cos(w*t)*0.5 - 0.5
-	a = 0.5 * w * w * math.Cos(w*t)
+func truth(t float32) (h, a float32) {
+	w := 2 * fmath.Pi * 0.2
+	c := fmath.Cos(fmath.WrapPi(w * t))
+	h = 0.5 - 0.5*c
+	a = 0.5 * w * w * c
 	return
 }
 
 func run(t *testing.T, useRange bool) (rms, bias float32) {
-	r := rand.New(rand.NewSource(1))
+	r := sim.NewRand(1)
 	f := New(testConfig())
 	const dt = 0.0025
 	const accelBias = 0.2
-	var sum float64
+	var sum float32
 	n := 0
 	for i := range 8000 {
-		tm := float64(i) * dt
+		tm := float32(i) * dt
 		h, a := truth(tm)
-		f.Predict(float32(-a+accelBias+r.NormFloat64()*0.3), dt)
+		f.Predict(-a+accelBias+r.Normal()*0.3, dt)
 		if i%8 == 0 {
-			f.UpdateBaro(float32(120 + h + r.NormFloat64()*0.3))
+			f.UpdateBaro(120 + h + r.Normal()*0.3)
 		}
 		if useRange && i%13 == 0 {
-			f.UpdateRange(float32(h+0.01+r.NormFloat64()*0.01), 1)
+			f.UpdateRange(h+0.01+r.Normal()*0.01, 1)
 		}
 		if tm > 10 {
-			e := float64(f.Z()) + h
+			e := f.Z() + h
 			sum += e * e
 			n++
 		}
 	}
-	rms, bias = float32(math.Sqrt(sum/float64(n))), f.Bias()
+	rms, bias = fmath.Sqrt(sum/float32(n)), f.Bias()
 	t.Logf("rms %.4f m, bias %.3f m/s²", rms, bias)
 	return
 }
@@ -88,11 +88,16 @@ func TestGateRejectsOutlier(t *testing.T) {
 	}
 }
 
-func TestPressureToAltitude(t *testing.T) {
-	if a := PressureToAltitude(101325); fmath.Abs(a) > 0.01 {
-		t.Errorf("sea level gave %v", a)
+func TestBaroHeight(t *testing.T) {
+	if h := BaroHeight(101325, 101325, 15); h != 0 {
+		t.Errorf("same pressure gave %v", h)
 	}
-	if a := PressureToAltitude(89876); fmath.Abs(a-1000) > 5 {
-		t.Errorf("89876 Pa gave %v, want about 1000 m", a)
+	// About 0.12 hPa per m near sea level at 15 °C.
+	if h := BaroHeight(101325-12.0, 101325, 15); fmath.Abs(h-1.0) > 0.01 {
+		t.Errorf("12 Pa drop gave %v m, want about 1", h)
+	}
+	// Standard atmosphere, 89876 Pa is 1000 m above 101325 Pa with a mean temperature near 11.5 °C.
+	if h := BaroHeight(89876, 101325, 11.5); fmath.Abs(h-1000) > 5 {
+		t.Errorf("89876 Pa gave %v, want about 1000 m", h)
 	}
 }

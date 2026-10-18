@@ -181,7 +181,10 @@ func (f *Flight) readFlow(now msg.Time) error {
 // applySlowSensors feeds any new slow readings to the estimators.
 func (f *Flight) applySlowSensors() {
 	if f.slow.baro.take(&f.baro) {
-		if f.altEst.UpdateBaro(altest.PressureToAltitude(f.baro.Pressure)) {
+		if f.baroRef == 0 {
+			f.baroRef = f.baro.Pressure
+		}
+		if f.altEst.UpdateBaro(altest.BaroHeight(f.baro.Pressure, f.baroRef, f.baro.Temperature)) {
 			f.pos.ZValid = true
 		}
 	}
