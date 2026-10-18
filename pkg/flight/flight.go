@@ -1,4 +1,4 @@
-// Package flight connects every stage into one loop: read sensors, estimate, decide, control, mix, drive motors.
+// Package flight connects every stage into one loop that reads sensors, estimates, decides, controls, mixes and drives motors.
 package flight
 
 import (

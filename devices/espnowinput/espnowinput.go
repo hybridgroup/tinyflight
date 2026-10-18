@@ -94,7 +94,7 @@ func (in *Input) Paired() bool { return in.paired.Load() }
 // MAC is this vehicle's address. The joystick sends to its last three bytes.
 func (in *Input) MAC() [6]byte { return in.mac }
 
-// announce sends the pairing packet the joystick listens for: channel, MAC, then the tag.
+// announce sends the pairing packet the joystick listens for, with the channel, MAC and tag.
 func (in *Input) announce() {
 	espradio.LockToCore0()
 	defer espradio.UnlockFromCore0()
