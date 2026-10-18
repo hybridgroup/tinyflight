@@ -8,15 +8,18 @@ The design follows the [PX4 multicopter controller](https://docs.px4.io/main/en/
 
 A quadcopter can't hover by itself. Hundreds of times a second, the flight controller has to work out which way the vehicle is pointing, compare that with what the pilot wants, and change the speed of each motor to correct the difference. Tinyflight does this 400 times per second in one loop:
 
-```
-             +-----------+     +------------+     +-----------+
- IMU ------> |  sensors  | --> | estimators | --> | commander |  <-- pilot input
-             +-----------+     +------------+     +-----------+
-                                     |                  |
-                                     v                  v
-                      +----------------------------------------+
-                      |  position -> attitude -> rate -> mixer  | --> motors
-                      +----------------------------------------+
+```mermaid
+flowchart LR
+    imu([IMU]) --> sensors --> estimators --> commander
+    pilot([pilot input]) --> commander
+    estimators --> position
+    commander --> position
+
+    subgraph controllers [controllers and mixer]
+        position --> attitude --> rate --> mixer
+    end
+
+    mixer --> motors([motors])
 ```
 
 1. **Sensors** read the IMU and clean up the numbers.
@@ -132,9 +135,12 @@ flowchart TD
 
 Each loop in the chain controls something that's faster and easier than the loop above it:
 
-```
-height error --(position)--> climb rate --(PID)--> thrust
-stick angle  --(attitude)--> spin rate  --(rate PID)--> torque --(mixer)--> motors
+```mermaid
+flowchart LR
+    herr[height error] -->|position| climb[climb rate] -->|PID| thrust
+    angle[stick angle] -->|attitude| spin[spin rate] -->|rate PID| torque
+    thrust -->|mixer| motors
+    torque -->|mixer| motors
 ```
 
 The rate loop only has to make the vehicle spin at a chosen speed. That's quick and direct, because motor torque changes spin rate right away. The attitude loop then only has to choose a spin rate that turns the vehicle toward the wanted angle. Splitting the problem this way keeps each part simple and easy to tune one at a time: tune rate first, then attitude, then height.
