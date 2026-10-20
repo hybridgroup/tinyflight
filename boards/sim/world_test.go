@@ -148,3 +148,27 @@ func TestSignalLost(t *testing.T) {
 		t.Errorf("no failsafe after 1 s without packets, status %+v", r.f.Status())
 	}
 }
+
+// A drone disarmed in the air must fall flat and arm again on the ground.
+func TestRearmAfterDrop(t *testing.T) {
+	r := newRig(t)
+	r.s.autoAlt = true
+	r.arm()
+	r.s.throttle = 1
+	r.fly(1.5, nil)
+	r.s.throttle = 0
+	r.fly(1, nil)
+	r.s.arm = true
+	r.fly(0.2, nil)
+	r.s.arm = false
+	var tilt float32
+	r.fly(1.5, func() { tilt = fmath.Max(tilt, r.w.Quad.Q.Tilt()) })
+	if r.f.Status().Armed || !r.w.Quad.OnGround() {
+		t.Fatalf("armed %v on ground %v", r.f.Status().Armed, r.w.Quad.OnGround())
+	}
+	if tilt > fmath.Radians(10) {
+		t.Errorf("tumbled %.0f° while falling with the motors off", fmath.Degrees(tilt))
+	}
+	r.s.autoAlt = false
+	r.arm()
+}

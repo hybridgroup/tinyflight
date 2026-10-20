@@ -2,6 +2,8 @@
 package sim
 
 import (
+	"math"
+
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/input"
@@ -25,6 +27,8 @@ type World struct {
 	Hardware flight.Hardware
 	now      msg.Time
 	dt       float32
+	// imbalance is torque per N of total thrust.
+	imbalance fmath.Vec3
 }
 
 // New returns a drone resting on the ground, with sensors that match the chip axes in cfg.
@@ -33,8 +37,7 @@ func New(cfg params.Config) *World {
 	p.FlowScale = cfg.Sensors.FlowScale
 	p.RangeDelay = cfg.AltEst.RangeDelay
 	q := physics.New(p)
-	q.Disturb = imbalance(cfg, p)
-	w := &World{Quad: q, dt: 1 / cfg.LoopHz}
+	w := &World{Quad: q, dt: 1 / cfg.LoopHz, imbalance: imbalance(cfg, p)}
 	w.Joystick.dec = input.NewAtomJoystick(MAC)
 	w.Hardware = flight.Hardware{
 		IMU:    chipIMU{q, cfg.Sensors.Rotation.Transpose()},
@@ -49,8 +52,8 @@ func New(cfg params.Config) *World {
 	return w
 }
 
-// imbalance is the steady torque that cfg.Rate.Trim cancels at hover. The real StampFly needs that
-// trim to lift off level, see boards/stampfly/config.go, so the model gets the same imbalance.
+// imbalance is the torque per N of thrust that cfg.Rate.Trim cancels at hover. The real StampFly needs
+// that trim to lift off level, see boards/stampfly/config.go, so the model gets the same imbalance.
 func imbalance(cfg params.Config, p physics.Params) fmath.Vec3 {
 	hover := cfg.Hover.Offset + cfg.Hover.Slope*p.Voltage
 	if cfg.Hover.Slope == 0 {
@@ -61,12 +64,14 @@ func imbalance(cfg params.Config, p physics.Params) fmath.Vec3 {
 	m.Mix(&msg.ThrustTorque{Thrust: hover}, &level)
 	m.Mix(&msg.ThrustTorque{Thrust: hover, Torque: cfg.Rate.Trim}, &trimmed)
 	var t fmath.Vec3
+	var total float32
 	for i, g := range p.Geometry {
 		a, b := trimmed.Value[i], level.Value[i]
 		d := p.MaxThrust * (a*a - b*b)
 		t = t.Add(fmath.Vec3{X: g.Roll * p.Arm * d, Y: g.Pitch * p.Arm * d, Z: g.Yaw * p.YawCoef * d})
+		total += p.MaxThrust * b * b
 	}
-	return t.Scale(-1)
+	return t.Scale(-1 / total)
 }
 
 // Now is the simulated time since power on.
@@ -75,6 +80,11 @@ func (w *World) Now() msg.Time { return w.now }
 // Step advances the physics by one loop period, then runs one pass of the flight loop.
 func (w *World) Step(f *flight.Flight) {
 	for range Substeps {
+		var thrust float32
+		for _, t := range w.Quad.Thrust {
+			thrust += t
+		}
+		w.Quad.Disturb = w.imbalance.Scale(thrust)
 		w.Quad.Step(w.dt / Substeps)
 	}
 	w.now += msg.Time(w.dt * 1e6)
@@ -169,6 +179,12 @@ type LED struct{ R, G, B uint8 }
 // SetColor stores the color.
 func (l *LED) SetColor(r, g, b uint8) { l.R, l.G, l.B = r, g, b }
 
+// Full scale of the BMI270 as boards/stampfly/stampfly.go sets it up. A reading past it clips.
+const (
+	accelRange = 16 * fmath.Gravity
+	gyroRange  = 2000 * math.Pi / 180
+)
+
 // chipIMU turns the body axes of the physics into the BMI270 chip axes the config expects.
 type chipIMU struct {
 	q   *physics.Quad
@@ -179,9 +195,13 @@ func (c chipIMU) ReadIMU(s *msg.IMUSample) error {
 	if err := c.q.ReadIMU(s); err != nil {
 		return err
 	}
-	s.Accel = c.inv.MulVec(s.Accel)
-	s.Gyro = c.inv.MulVec(s.Gyro)
+	s.Accel = clip(c.inv.MulVec(s.Accel), accelRange)
+	s.Gyro = clip(c.inv.MulVec(s.Gyro), gyroRange)
 	return nil
+}
+
+func clip(v fmath.Vec3, r float32) fmath.Vec3 {
+	return fmath.Vec3{X: fmath.Clamp(v.X, -r, r), Y: fmath.Clamp(v.Y, -r, r), Z: fmath.Clamp(v.Z, -r, r)}
 }
 
 // chipFlow turns the body axes of the physics into the PMW3901 chip axes the config expects.
