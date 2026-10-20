@@ -80,6 +80,7 @@ Some pieces aren't merged upstream yet. Until they are, the build needs a TinyGo
 | [#916](https://github.com/tinygo-org/drivers/pull/916) | ina3221 |
 | [#917](https://github.com/tinygo-org/drivers/pull/917) | bmi270 |
 | [#918](https://github.com/tinygo-org/drivers/pull/918) | pmw3901 |
+| [#919](https://github.com/tinygo-org/drivers/pull/919) | amg88xx |
 
 `go.mod` points at the local checkout with a `replace` line. It goes away once the PRs merge.
 
