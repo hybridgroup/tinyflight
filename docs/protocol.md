@@ -59,12 +59,12 @@ This is done by `pkg/input/atom.go`.
 | Stick | Tinyflight input |
 |---|---|
 | Roll, pitch, yaw | Roll, pitch and yaw, clamped to -1 to 1 |
-| Throttle above 0.2 | Throttle, 0 to 1. Below 0.2 the throttle is 0, the same deadband as the stock firmware. |
-| Throttle, whole range | Also gives the climb rate request for AltHold, with a 0.2 deadband around center |
+| Throttle above 0.2 | Throttle, rescaled from 0 at 0.2 to 1 at full stick. Below 0.2 the throttle is 0, the same deadband as the stock firmware. |
+| Throttle, whole range | Also gives the climb rate request for AltHold and PosHold, with a 0.2 deadband around center |
 
 **Arming:** each time the arm button is released, arming toggles. The commander still runs its own arming checks.
 
-**Modes:** control mode 1 gives Acro, otherwise Stabilize. Altitude mode 4 overrides both and gives AltHold.
+**Modes:** control mode 1 gives Acro, otherwise Stabilize. Altitude mode 4 gives AltHold with control mode 0, and PosHold with control mode 1. On the joystick the Mode button toggles altitude mode and the Option button toggles control mode, from `check_alt_mode_change` and `check_control_mode_change` in [StampFlyController](https://github.com/m5stack/Atom-JoyStick/blob/main/examples/StampFlyController/src/main.cpp).
 
 ## Telemetry packet, drone to joystick, 120 bytes
 
@@ -81,7 +81,7 @@ Tinyflight broadcasts it 10 times per second once a joystick has paired. The joy
 | 5 | 18 | Yaw, float, degrees | Attitude estimate |
 | 15 | 58 | Battery voltage, float | INA3221 reading |
 | 25 | 98 | Altitude, float, m | Height above the takeoff point |
-| 28, byte 1 | 110 | Altitude flag | 1 when armed in AltHold |
+| 28, byte 1 | 110 | Altitude flag | 1 when armed in AltHold or PosHold |
 | 28, byte 2 | 111 | Flight mode | See below |
 | 28, bytes 3 and 4 | 112 | Front ToF distance, uint16, mm | 0 for now |
 
