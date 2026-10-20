@@ -12,6 +12,7 @@ Flight control firmware written in Go and built with [TinyGo](https://tinygo.org
 - Fly with the M5 Atom Joystick over ESP-NOW, using its stock firmware
 - Arming checks, plus failsafes for lost pilot input, low battery, crashes and IMU failure
 - Pure Go flight stack with full set of tests, including closed loop tests on a simulated quad
+- tinyflightsim, a browser flight sim that runs the real firmware as WebAssembly, flown with an on-screen Atom Joystick
 - Bench control with text lines over USB serial
 - Optional blackbox flight log saved to flash
 
@@ -23,15 +24,22 @@ Flight control firmware written in Go and built with [TinyGo](https://tinygo.org
 - Height and position estimates from Kalman filters using the barometer, ToF distance sensor and optical flow
 - Cascaded position, attitude and rate controllers
 
-See [docs/architecture.md](docs/architecture.md) for architectural details. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it.
+See [docs/architecture.md](docs/architecture.md) for architectural details. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it. See [docs/simulator.md](docs/simulator.md) for the browser sim.
+
+## tinyflightsim
+
+Fly the real firmware in a web browser before you fly the drone. See [Flying in the browser sim](#flying-in-the-browser-sim).
+
+![tinyflightsim](images/tinyflightsim.png)
 
 ## Layout
 
 ```
 pkg/      flight stack written in pure Go with unit tests
 devices/  adapters from TinyGo drivers to pkg/hal
-boards/   board setup, such as boards/stampfly
+boards/   board setup, such as boards/stampfly, and boards/sim for the browser sim
 firmware/ firmware and bench tools to flash
+tools/    host tools, such as the tinyflightsim browser sim
 docs/     documentation
 ```
 
@@ -42,6 +50,15 @@ go test ./...
 ```
 
 This includes closed loop tests that fly a simulated quad.
+
+## Flying in the browser sim
+
+```
+cd tools/tinyflightsim
+go run .
+```
+
+Then open http://localhost:8080. The server builds `firmware/stampfly` with TinyGo to WebAssembly and runs it against a physics model of the StampFly. See [docs/simulator.md](docs/simulator.md).
 
 ## Building for the StampFly
 
