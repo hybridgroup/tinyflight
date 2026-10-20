@@ -20,15 +20,8 @@ func Abs(x float32) float32 { return tinymath.Abs(x) }
 // SinCos returns the sine and cosine of x in radians, with the same error as Sin and Cos.
 func SinCos(x float32) (s, c float32) { return tinymath.SinCos(x) }
 
-// Atan2 maps tinymath.Atan2Norm itself, since tinymath.Atan2 v1.2.0 is wrong for any negative y.
-// Upstream fix: https://github.com/orsinium-labs/tinymath/pull/2
-func Atan2(y, x float32) float32 {
-	n := tinymath.Atan2Norm(y, x)
-	if n > 2 {
-		n -= 4
-	}
-	return Pi / 2 * n
-}
+// Atan2 returns the angle of (x, y) in radians, in (-Pi, Pi].
+func Atan2(y, x float32) float32 { return tinymath.Atan2(y, x) }
 
 // Asin uses Atan2 and Sqrt, since tinymath.Asin uses a rough inverse square root and is off by up to 0.018 rad.
 func Asin(x float32) float32 {

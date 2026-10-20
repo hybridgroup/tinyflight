@@ -11,7 +11,7 @@ require (
 )
 
 require (
-	github.com/orsinium-labs/tinymath v1.2.0 // indirect
+	github.com/orsinium-labs/tinymath v1.2.1 // indirect
 	golang.org/x/exp v0.0.0-20210526181343-b47a03e3048a // indirect
 	golang.org/x/tools v0.1.12 // indirect
 )

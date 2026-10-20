@@ -45,7 +45,7 @@ This includes closed loop tests that fly a simulated quad.
 
 ## Building for the StampFly
 
-Some pieces aren't merged upstream yet. Until they are, the build needs a TinyGo built with these PRs, and local checkouts next to this repo.
+Some pieces aren't merged upstream yet. Until they are, the build needs a TinyGo built with these PRs, and a local drivers checkout next to this repo.
 
 **TinyGo**, with these PRs merged into `dev`:
 
@@ -64,9 +64,7 @@ Some pieces aren't merged upstream yet. Until they are, the build needs a TinyGo
 | [#917](https://github.com/tinygo-org/drivers/pull/917) | bmi270 |
 | [#918](https://github.com/tinygo-org/drivers/pull/918) | pmw3901 |
 
-**`../espradio`**, a tinygo-org/espradio checkout of the `espnow-noalloc` branch from [#102](https://github.com/tinygo-org/espradio/pull/102), which builds on [#101](https://github.com/tinygo-org/espradio/pull/101).
-
-`go.mod` points at the two local checkouts with `replace` lines. They go away once the PRs merge.
+`go.mod` points at the local checkout with a `replace` line. It goes away once the PRs merge.
 
 Build with the cores scheduler, so the flight loop gets a core to itself:
 
