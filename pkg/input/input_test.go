@@ -32,17 +32,21 @@ func TestAtomDecode(t *testing.T) {
 	if err := a.Decode(packet(0.5, 0.6, -0.25, 0.75, 0, 0, 5), 7, &in); err != nil {
 		t.Fatal(err)
 	}
-	if fmath.Abs(in.Climb-0.5) > 1e-5 {
-		t.Errorf("climb %v", in.Climb)
+	if fmath.Abs(in.Climb-0.5) > 1e-5 || fmath.Abs(in.Throttle-0.5) > 1e-5 {
+		t.Errorf("climb %v throttle %v, want both 0.5 after the deadband", in.Climb, in.Throttle)
 	}
-	in.Climb = 0
-	want := msg.ManualInput{Time: 7, Roll: -0.25, Pitch: 0.75, Yaw: 0.5, Throttle: 0.6, Mode: msg.ModeStabilize, Valid: true}
+	in.Climb, in.Throttle = 0, 0
+	want := msg.ManualInput{Time: 7, Roll: -0.25, Pitch: 0.75, Yaw: 0.5, Mode: msg.ModeStabilize, Valid: true}
 	if in != want {
 		t.Errorf("got %+v", in)
 	}
-	a.Decode(packet(0, 0.1, 0, 0, 0, 1, 4), 8, &in)
+	a.Decode(packet(0, 0.1, 0, 0, 0, 0, 4), 8, &in)
 	if in.Mode != msg.ModeAltHold || in.Throttle != 0 || in.Climb != 0 {
 		t.Errorf("althold or deadband wrong %+v", in)
+	}
+	a.Decode(packet(0, 0, 0, 0, 0, 1, 4), 8, &in)
+	if in.Mode != msg.ModePosHold {
+		t.Errorf("rate with altitude mode gave %v, want poshold", in.Mode)
 	}
 	a.Decode(packet(0, 0, 0, 0, 0, 1, 5), 9, &in)
 	if in.Mode != msg.ModeAcro {
