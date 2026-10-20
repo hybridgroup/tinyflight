@@ -4,8 +4,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tinyflight Sim</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{"imports": {"three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/"}}
+</script>
 </head>
 <body>
-<p>Tinyflight Sim</p>
+<header>
+  <h1>Tinyflight Sim</h1>
+  <span id="status" class="pill">starting</span>
+  <div class="tools">
+    <button id="restart" title="Power cycle the drone. Rebuilds the firmware if the sources changed.">Restart</button>
+    <button id="pause">Pause</button>
+    <label>Speed
+      <select id="speed">
+        <option value="25">0.25×</option>
+        <option value="50">0.5×</option>
+        <option value="100" selected>1×</option>
+      </select>
+    </label>
+    <label>Camera
+      <select id="camera">
+        <option value="chase" selected>Chase</option>
+        <option value="pilot">Pilot</option>
+        <option value="orbit">Orbit</option>
+      </select>
+    </label>
+    <button id="console-toggle">Console</button>
+  </div>
+</header>
+<main>
+  <canvas id="view"></canvas>
+  <dl id="hud">
+    <dt>Status</dt><dd id="hud-armed">-</dd>
+    <dt>Mode</dt><dd id="hud-mode">-</dd>
+    <dt>Failsafe</dt><dd id="hud-failsafe">-</dd>
+    <dt>Height</dt><dd id="hud-height">-</dd>
+    <dt>Estimate</dt><dd id="hud-est">-</dd>
+    <dt>Speed</dt><dd id="hud-speed">-</dd>
+    <dt>Battery</dt><dd id="hud-battery">-</dd>
+    <dt>Time</dt><dd id="hud-time">-</dd>
+  </dl>
+  <div id="joystick"></div>
+  <section id="console" hidden>
+    <pre id="console-text"></pre>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
 </body>
 </html>
