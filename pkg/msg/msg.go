@@ -42,6 +42,9 @@ type FlowSample struct {
 	DeltaY  int16
 	Quality uint8
 	Valid   bool
+	// Rate is the ground image motion in body axes, rad/s. X is positive when moving forward
+	// and Y when moving right, before the part caused by rotation is removed.
+	Rate fmath.Vec3
 }
 
 // BatteryStatus is one battery voltage and current reading.
@@ -58,9 +61,14 @@ type Attitude struct {
 	Rate fmath.Vec3 // rad/s, filtered body rate
 }
 
-// LocalPosition is the estimated height and vertical speed relative to the takeoff point.
+// LocalPosition is the estimated position and speed relative to the takeoff point.
 type LocalPosition struct {
 	Time    Time
+	X       float32 // m north
+	Y       float32 // m east
+	VX      float32 // m/s north
+	VY      float32 // m/s east
+	XYValid bool
 	Z       float32 // m, negative is above the takeoff point
 	VZ      float32 // m/s, negative is climbing
 	ZValid  bool
@@ -103,6 +111,7 @@ const (
 	ModeAcro FlightMode = iota
 	ModeStabilize
 	ModeAltHold
+	ModePosHold
 )
 
 // String returns the mode name.
@@ -114,6 +123,8 @@ func (m FlightMode) String() string {
 		return "stabilize"
 	case ModeAltHold:
 		return "althold"
+	case ModePosHold:
+		return "poshold"
 	}
 	return "unknown"
 }
@@ -125,7 +136,7 @@ type ManualInput struct {
 	Pitch    float32 // positive pitches nose up
 	Yaw      float32 // positive turns right
 	Throttle float32
-	Climb    float32 // -1 to 1, climb request used in AltHold
+	Climb    float32 // -1 to 1, climb request used in AltHold and PosHold
 	Arm      bool
 	Mode     FlightMode
 	Valid    bool

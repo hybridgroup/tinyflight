@@ -19,6 +19,8 @@ type Config struct {
 	NotchQ        float32
 	AccelOffset   fmath.Vec3 // m/s², subtracted after rotation
 	MagOffset     fmath.Vec3 // µT hard iron offset, subtracted after rotation
+	FlowRotation  fmath.Mat3 // flow chip axes to body axes
+	FlowScale     float32    // rad of image motion per flow count
 
 	CalibrationSamples int
 	StillThreshold     float32 // rad/s, gyro spread allowed while calibrating
@@ -104,4 +106,15 @@ func (p *IMU) calibrate(gyro fmath.Vec3) {
 func (p *IMU) Mag(raw *msg.MagSample, out *msg.MagSample) {
 	out.Time = raw.Time
 	out.Field = p.cfg.MagRotation.MulVec(raw.Field).Sub(p.cfg.MagOffset)
+}
+
+// Flow sets s.Rate from the counts in s gathered over dt seconds.
+func (p *IMU) Flow(s *msg.FlowSample, dt float32) {
+	if dt <= 0 {
+		s.Rate = fmath.Vec3{}
+		s.Valid = false
+		return
+	}
+	counts := fmath.Vec3{X: float32(s.DeltaX), Y: float32(s.DeltaY)}
+	s.Rate = p.cfg.FlowRotation.MulVec(counts).Scale(p.cfg.FlowScale / dt)
 }
