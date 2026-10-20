@@ -1,9 +1,12 @@
 import {Sim, STATE, MODES, FAILSAFES} from './sim.js';
 import {View} from './view.js';
+import {Joystick} from './joystick.js';
 
 const $ = (id) => document.getElementById(id);
 const sim = new Sim();
 const view = new View($('view'));
+// MAC in boards/sim/world.go.
+const joystick = new Joystick($('joystick'), sim, [0x02, 0x54, 0x46, 0x53, 0x49, 0x4D]);
 
 const status = $('status');
 function setStatus(text, cls = '') {
@@ -49,6 +52,11 @@ $('speed').onchange = () => {
 };
 $('camera').onchange = () => view.setCamera($('camera').value);
 $('console-toggle').onclick = () => { consoleBox.hidden = !consoleBox.hidden; };
+// Keep Space for the joystick screen rather than the last button clicked.
+for (const el of document.querySelectorAll('header button, header select')) {
+  el.addEventListener('click', () => el.blur());
+  el.addEventListener('change', () => el.blur());
+}
 
 const hud = {
   armed: $('hud-armed'), mode: $('hud-mode'), failsafe: $('hud-failsafe'), height: $('hud-height'),
@@ -94,4 +102,4 @@ if (!crossOriginIsolated) {
 requestAnimationFrame(frame);
 
 // For the joystick and for poking at the sim from the browser console.
-window.tinyflight = {sim, view};
+window.tinyflight = {sim, view, joystick};
