@@ -10,7 +10,7 @@ import (
 var ErrBadLine = errors.New("input: bad line")
 
 // ParseLine reads a bench control line such as "rc 0.1 -0.2 0 0.4 1 1".
-// Fields are roll, pitch, yaw, throttle, arm (0 or 1) and mode (0 acro, 1 stabilize, 2 althold).
+// Fields are roll, pitch, yaw, throttle, arm (0 or 1) and mode (0 acro, 1 stabilize, 2 althold, 3 poshold).
 func ParseLine(line []byte, now msg.Time, out *msg.ManualInput) error {
 	var v [6]float32
 	rest, ok := expect(line, "rc")
@@ -30,7 +30,7 @@ func ParseLine(line []byte, now msg.Time, out *msg.ManualInput) error {
 	out.Throttle = fmath.Clamp(v[3], 0, 1)
 	out.Climb = fmath.Deadband(out.Throttle*2-1, 0.1)
 	out.Arm = v[4] > 0.5
-	out.Mode = msg.FlightMode(fmath.Clamp(v[5], 0, float32(msg.ModeAltHold)))
+	out.Mode = msg.FlightMode(fmath.Clamp(v[5], 0, float32(msg.ModePosHold)))
 	out.Valid = true
 	return nil
 }

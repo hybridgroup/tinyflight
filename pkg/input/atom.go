@@ -70,18 +70,20 @@ func (a *AtomJoystick) Decode(data []byte, now msg.Time, out *msg.ManualInput) e
 	out.Roll = fmath.Clamp(roll, -1, 1)
 	out.Pitch = fmath.Clamp(pitch, -1, 1)
 	out.Yaw = fmath.Clamp(yaw, -1, 1)
-	out.Throttle = 0
-	if throttle > stickDeadband {
-		out.Throttle = fmath.Clamp(throttle, 0, 1)
-	}
 	out.Climb = fmath.Deadband(fmath.Clamp(throttle, -1, 1), stickDeadband)
+	out.Throttle = fmath.Max(out.Climb, 0)
 	out.Arm = a.armed
-	out.Mode = msg.ModeStabilize
-	if data[21] == atomRateControl {
-		out.Mode = msg.ModeAcro
-	}
-	if data[22] == atomAutoAlt {
+	rate := data[21] == atomRateControl
+	switch {
+	case data[22] == atomAutoAlt && rate:
+		// Rate control with altitude hold has no use of its own, so it gives PosHold.
+		out.Mode = msg.ModePosHold
+	case data[22] == atomAutoAlt:
 		out.Mode = msg.ModeAltHold
+	case rate:
+		out.Mode = msg.ModeAcro
+	default:
+		out.Mode = msg.ModeStabilize
 	}
 	out.Valid = true
 	return nil
