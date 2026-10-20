@@ -4,7 +4,7 @@
 
 Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1).
 
-See [docs/architecture.md](docs/architecture.md) for how it works. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick.
+See [docs/architecture.md](docs/architecture.md) for how it works. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it.
 
 ## Layout
 
@@ -66,4 +66,4 @@ tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly
 |---|---|
 | `stampfly-sensors` | Prints every sensor, the attitude, loop timing and heap use. The motors stay off. |
 | `stampfly-motortest` | Spins each motor in turn when you press the button. Remove the propellers first. |
-| `stampfly` | The flight firmware. For bench tests, send lines over USB serial in the form `rc roll pitch yaw throttle arm mode`. Mode is 0 for acro, 1 for stabilize and 2 for althold. |
+| `stampfly` | The flight firmware. For bench tests, send lines over USB serial in the form `rc roll pitch yaw throttle arm mode`. Mode is 0 for acro, 1 for stabilize, 2 for althold and 3 for poshold. Built with `-tags blackbox`, it saves the last 5 flights to flash and prints the latest over USB every 10 s while disarmed. See [docs/joystick.md](docs/joystick.md#reading-the-flight-log). |
