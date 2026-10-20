@@ -47,11 +47,7 @@ func (a *AtomJoystick) Decode(data []byte, now msg.Time, out *msg.ManualInput) e
 	if data[0] != a.mac[0] || data[1] != a.mac[1] || data[2] != a.mac[2] {
 		return ErrNotForUs
 	}
-	var sum byte
-	for _, b := range data[:24] {
-		sum += b
-	}
-	if sum != data[24] {
+	if checksum(data[:24]) != data[24] {
 		return ErrChecksum
 	}
 

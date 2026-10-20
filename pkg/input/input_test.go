@@ -121,3 +121,48 @@ func TestAtomTelemetry(t *testing.T) {
 		t.Errorf("Encode allocates %v times", n)
 	}
 }
+
+func TestCameraRoundTrip(t *testing.T) {
+	var p [CameraPacketMax]byte
+	f := CameraFrame{Seq: 513, Format: CameraThermal, Width: 8, Height: 8, Chunks: 1, Count: 64}
+	for i := range 64 {
+		f.Pixels[i] = int16(i*37 - 900)
+	}
+	n := f.Encode(&p)
+	if n != 139 {
+		t.Fatalf("length %d, want 139", n)
+	}
+	// The joystick only reads packets starting 88 88, and its peering check looks for AA 55 16 88 at byte 7.
+	if p[0] == 88 || p[7] == 0xaa {
+		t.Errorf("packet could be read by the joystick")
+	}
+	var got CameraFrame
+	if err := DecodeCamera(p[:n], &got); err != nil {
+		t.Fatal(err)
+	}
+	if got != f {
+		t.Errorf("got %+v", got)
+	}
+	if a := testing.AllocsPerRun(100, func() { f.Encode(&p) }); a > 0 {
+		t.Errorf("Encode allocates %v times", a)
+	}
+}
+
+func TestCameraRejects(t *testing.T) {
+	var p [CameraPacketMax]byte
+	f := CameraFrame{Format: CameraThermal, Width: 8, Height: 8, Chunks: 1, Count: 64}
+	n := f.Encode(&p)
+	var got CameraFrame
+	p[20]++
+	if DecodeCamera(p[:n], &got) != ErrChecksum {
+		t.Error("bad checksum accepted")
+	}
+	if DecodeCamera(p[:n-1], &got) != ErrShort {
+		t.Error("short packet accepted")
+	}
+	var tel [AtomTelemetrySize]byte
+	(&AtomTelemetry{}).Encode(&tel)
+	if DecodeCamera(tel[:], &got) != ErrNotCamera {
+		t.Error("telemetry read as camera")
+	}
+}
