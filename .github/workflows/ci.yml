@@ -33,6 +33,21 @@ jobs:
         working-directory: tools/tinyflightsim
         run: go vet ./... && go test ./...
 
+  cameraview:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/cameraview
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/cameraview/go.mod
+
+      - name: Test tools/cameraview
+        run: go vet ./... && go test ./...
+
   sim-firmware:
     runs-on: ubuntu-latest
     container: tinygo/tinygo-dev:latest

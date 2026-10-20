@@ -24,7 +24,7 @@ Flight control firmware written in Go and built with [TinyGo](https://tinygo.org
 - Height and position estimates from Kalman filters using the barometer, ToF distance sensor and optical flow
 - Cascaded position, attitude and rate controllers
 
-See [docs/architecture.md](docs/architecture.md) for architectural details. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it. See [docs/simulator.md](docs/simulator.md) for the browser sim.
+See [docs/architecture.md](docs/architecture.md) for architectural details. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it. See [docs/simulator.md](docs/simulator.md) for the browser sim. See [docs/camera.md](docs/camera.md) for streaming images from an optional thermal camera.
 
 ## tinyflightsim
 
@@ -39,7 +39,7 @@ pkg/      flight stack written in pure Go with unit tests
 devices/  adapters from TinyGo drivers to pkg/hal
 boards/   board setup, such as boards/stampfly, and boards/sim for the browser sim
 firmware/ firmware and bench tools to flash
-tools/    host tools, such as the tinyflightsim browser sim
+tools/    host tools, such as the tinyflightsim browser sim and the cameraview image viewer
 docs/     documentation
 ```
 
@@ -99,3 +99,4 @@ tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly
 | `stampfly-sensors` | Prints every sensor, the attitude, loop timing and heap use. The motors stay off. |
 | `stampfly-motortest` | Spins each motor in turn when you press the button. Remove the propellers first. |
 | `stampfly` | The flight firmware. For bench tests, send lines over USB serial in the form `rc roll pitch yaw throttle arm mode`. Mode is 0 for acro, 1 for stabilize, 2 for althold and 3 for poshold. Built with `-tags blackbox`, it saves the last 5 flights to flash and prints the latest over USB every 10 s while disarmed. See [docs/joystick.md](docs/joystick.md#reading-the-flight-log). |
+| `camera-receiver` | For an ESP32-C3 on the computer, not the StampFly. Prints camera frames heard over ESP-NOW for `tools/cameraview`. See [docs/camera.md](docs/camera.md). |

@@ -1,0 +1,102 @@
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --text: #1c2024;
+  --muted: #5d6670;
+  --border: #d4d8dd;
+  --ok: #1e8a4c;
+  --warn: #b7791f;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15181c;
+    --panel: #1c2025;
+    --text: #e6e8eb;
+    --muted: #9aa3ad;
+    --border: #353b42;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15181c;
+  --panel: #1c2025;
+  --text: #e6e8eb;
+  --muted: #9aa3ad;
+  --border: #353b42;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 system-ui, sans-serif;
+}
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+h1 { font-size: 16px; margin: 0; }
+.tools { display: flex; gap: 12px; margin-left: auto; align-items: center; }
+.pill {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.pill.ok { color: var(--ok); border-color: var(--ok); }
+.pill.warn { color: var(--warn); border-color: var(--warn); }
+main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  align-items: flex-start;
+}
+.view { position: relative; width: min(480px, 100%); }
+#image {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  image-rendering: pixelated;
+  background: #000;
+}
+.cursor {
+  position: absolute;
+  pointer-events: none;
+  font: 12px var(--mono);
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  transform: translate(8px, -120%);
+}
+.scale {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font: 12px var(--mono);
+  color: var(--muted);
+}
+#bar { width: 16px; height: 256px; border: 1px solid var(--border); }
+#hud {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+#hud dt { color: var(--muted); }
+#hud dd { margin: 0; font-family: var(--mono); text-align: right; }

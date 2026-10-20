@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tinyflight Camera</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Tinyflight Camera</h1>
+  <span id="status" class="pill">waiting</span>
+  <div class="tools">
+    <label>Range
+      <select id="range">
+        <option value="auto" selected>Auto</option>
+        <option value="room">15 to 40 °C</option>
+        <option value="wide">0 to 80 °C</option>
+      </select>
+    </label>
+    <label><input id="smooth" type="checkbox" checked> Smooth</label>
+  </div>
+</header>
+<main>
+  <div class="view">
+    <canvas id="image" width="320" height="320"></canvas>
+    <div id="cursor" class="cursor" hidden></div>
+  </div>
+  <div class="scale">
+    <span id="scale-max">-</span>
+    <canvas id="bar" width="16" height="256"></canvas>
+    <span id="scale-min">-</span>
+  </div>
+  <dl id="hud">
+    <dt>Min</dt><dd id="hud-min">-</dd>
+    <dt>Max</dt><dd id="hud-max">-</dd>
+    <dt>Center</dt><dd id="hud-center">-</dd>
+    <dt>Frame</dt><dd id="hud-seq">-</dd>
+    <dt>Rate</dt><dd id="hud-fps">-</dd>
+  </dl>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
