@@ -1,24 +1,41 @@
 <img alt="tinyflight" src="images/tinyflight-banner.svg" width="400">
 
-# tinyflight
+# Tinyflight
 
 Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1).
 
 ![m5stamp fly](./images/m5stampfly.gif)
 
-See [docs/architecture.md](docs/architecture.md) for how it works. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it.
+## Features
+
+- Flight modes: Acrobatic, Stabilized, Altitude Hold, and Position Hold
+- Fly with the M5 Atom Joystick over ESP-NOW, using its stock firmware
+- Arming checks, plus failsafes for lost pilot input, low battery, crashes and IMU failure
+- Pure Go flight stack with full set of tests, including closed loop tests on a simulated quad
+- Bench control with text lines over USB serial
+- Optional blackbox flight log saved to flash
+
+## How it works
+
+- 400 Hz flight loop with no heap memory allocations after startup
+- Supports multicore on the ESP32-S3, where the flight loop gets a core to itself
+- Attitude estimation using Mahony filters
+- Height and position estimates from Kalman filters using the barometer, ToF distance sensor and optical flow
+- Cascaded position, attitude and rate controllers
+
+See [docs/architecture.md](docs/architecture.md) for architectural details. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it.
 
 ## Layout
 
 ```
-pkg/      flight stack, pure Go, runs and tests on a PC
+pkg/      flight stack written in pure Go with unit tests
 devices/  adapters from TinyGo drivers to pkg/hal
 boards/   board setup, such as boards/stampfly
 firmware/ firmware and bench tools to flash
-docs/     architecture
+docs/     documentation
 ```
 
-## Testing on a PC
+## Running the tests
 
 ```
 go test ./...
