@@ -60,10 +60,10 @@ func report(f *flight.Flight) {
 		in := f.Input()
 		println("armed", s.Armed, "mode", s.Mode.String(), "failsafe", s.Failsafe.String(),
 			"rpy", deg(r), deg(p), deg(y),
-			"z_mm", int(f.Position().Z*1000), "batt_mV", int(f.Battery().Voltage*1000),
+			"z_mm", int(f.Position().Z*1000), "xy_mm", int(f.Position().X*1000), int(f.Position().Y*1000), f.Position().XYValid, "batt_mV", int(f.Battery().Voltage*1000),
 			"overruns", st.Overruns, "step_us", st.MaxStep.Microseconds(),
 			"motors_fl_fr_rl_rr", milli(m[0]), milli(m[1]), milli(m[2]), milli(m[3]),
-			"radio_ok", radioPackets(), "radio_bad", radioRejected(),
+			"radio_ok", radioPackets(), "radio_bad", radioRejected(), "tel_sent", telemetrySent(), "tel_failed", telemetryFailed(),
 			"in_rpy_thr_climb", milli(in.Roll), milli(in.Pitch), milli(in.Yaw), milli(in.Throttle), milli(in.Climb), "in_arm", in.Arm,
 			"gc", ms.NumGC-lastGC, "mallocs", ms.Mallocs-lastMallocs, "heap_kb", ms.HeapAlloc/1024)
 		lastGC, lastMallocs = ms.NumGC, ms.Mallocs
@@ -73,13 +73,14 @@ func report(f *flight.Flight) {
 
 func deg(rad float32) int { return int(fmath.Degrees(rad)) }
 
-// startOnCores runs the flight loop alone on core 1. Core 0 takes interrupts, the radio,
-// the slow sensors and the printout. Build with -scheduler=cores to use both cores.
+// startOnCores runs the flight loop alone on core 1. Core 0 takes interrupts, the radio, the slow
+// sensors, the printout and any blackbox log. Build with -scheduler=cores to use both cores.
 func startOnCores(f *flight.Flight) {
 	go func() {
 		machine.AssignCore(0)
 		report(f)
 	}()
+	startBlackbox(f)
 	if runtime.NumCPU() < 2 {
 		f.Run()
 	}
@@ -100,6 +101,20 @@ func radioPackets() uint32 {
 		return 0
 	}
 	return joystick.Packets.Load()
+}
+
+func telemetrySent() uint32 {
+	if joystick == nil {
+		return 0
+	}
+	return joystick.Sent.Load()
+}
+
+func telemetryFailed() uint32 {
+	if joystick == nil {
+		return 0
+	}
+	return joystick.SendFailed.Load()
 }
 
 func radioRejected() uint32 {
@@ -129,7 +144,7 @@ func fillTelemetry(f *flight.Flight, t *input.AtomTelemetry) {
 		t.Mode = input.AtomModeLanding
 	default:
 		t.Mode = input.AtomModeFlight
-		if s.Mode == msg.ModeAltHold {
+		if s.Mode == msg.ModeAltHold || s.Mode == msg.ModePosHold {
 			t.AltFlag = 1
 		}
 	}

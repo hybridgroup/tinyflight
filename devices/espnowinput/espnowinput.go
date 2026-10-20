@@ -35,6 +35,9 @@ type Input struct {
 	paired   atomic.Bool
 	Packets  atomic.Uint32
 	Rejected atomic.Uint32
+	// Sent and SendFailed count telemetry packets. A broadcast gets no reply, so Sent only means it was queued.
+	Sent       atomic.Uint32
+	SendFailed atomic.Uint32
 }
 
 // Start brings up the radio on Channel, listens for the joystick, and announces this vehicle until it pairs.
@@ -84,7 +87,11 @@ func (in *Input) RunTelemetry(every time.Duration, fill func(t *input.AtomTeleme
 		}
 		fill(&t)
 		t.Encode(&pkt)
-		espradio.ESPNowSend(&addr, pkt[:])
+		if espradio.ESPNowSend(&addr, pkt[:]) != nil {
+			in.SendFailed.Add(1)
+		} else {
+			in.Sent.Add(1)
+		}
 	}
 }
 
