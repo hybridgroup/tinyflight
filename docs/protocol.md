@@ -98,3 +98,30 @@ These come from `flight_control.hpp`. Tinyflight sends only three of them.
 | 5 | `AUTO_LANDING_MODE` | Failsafe landing |
 
 The stock firmware also defines 0 init, 1 averaging, 4 log and 6 flip.
+
+## Camera packet, drone to ground receiver
+
+Sent when an optional camera is plugged in, such as the AMG8833 thermal sensor on the Grove port. See [camera.md](camera.md). It is a broadcast, sent only after a joystick has paired. The joystick ignores it, since it only reads packets that start with `88 88`.
+
+A frame larger than one packet is split into chunks. Chunk `n` holds the pixels from `n * 119` on, in rows from the top left. The AMG8833 fits in one chunk.
+
+| Offset | Size | Field | Notes |
+|---|---|---|---|
+| 0 | 2 | `43 4D` | "CM" |
+| 2 | 2 | Frame number, uint16 | Counts up by one per frame |
+| 4 | 1 | Pixel format | See below |
+| 5 | 1 | Width in pixels | 8 for the AMG8833 |
+| 6 | 1 | Height in pixels | 8 for the AMG8833 |
+| 7 | 1 | Chunk number | From 0 |
+| 8 | 1 | Chunk count | |
+| 9 | 1 | Pixels in this chunk, `n` | At most 119 |
+| 10 | 2n | Pixels, int16 | |
+| 10 + 2n | 1 | Checksum | Sum of all bytes before it, modulo 256 |
+
+### Pixel formats
+
+| Value | Format |
+|---|---|
+| 1 | Thermal, int16 in 0.25 °C units, from the AMG88xx pixel registers |
+
+This is done by `pkg/input/camera.go`.
