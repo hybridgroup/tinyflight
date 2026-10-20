@@ -13,7 +13,8 @@ The AMG8833 gives 8 by 8 pixels from 0 to 80 °C at 10 frames per second. The pa
 
 ## What you need
 
-- An AMG8833 breakout with a Grove cable, such as the Seeed Grove or Adafruit board. The Grove port gives 5 V, so the breakout needs its own 3.3 V regulator. Most have one.
+- An AMG8833 breakout, such as the Seeed Grove or Adafruit board. The Adafruit board has STEMMA QT, which needs a Grove to STEMMA QT cable such as Adafruit 4528.
+- Measure the red Grove pin against black before plugging in. The ESP32-S3 pins take at most 3.3 V. The Adafruit board pulls SDA and SCL up to its Vin, so it is only safe if the red pin is 3.3 V.
 - An ESP32-C3 board, such as a Seeed XIAO ESP32-C3. A computer cannot hear ESP-NOW on its own.
 
 ## Wiring
