@@ -3,6 +3,7 @@
 package altitude
 
 import (
+	"github.com/hybridgroup/tinyflight/pkg/estimator/axis"
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 )
 
@@ -16,20 +17,33 @@ type Config struct {
 	RangeMax   float32 // m, ignore range readings beyond this
 	RangeHold  float32 // s, how long a range reading keeps the baro out of the filter
 	BaroTrack  float32 // 0 to 1, how fast the baro offset follows while range is in use
+	RangeDelay float32 // s, how old a range reading is when it arrives, up to about 0.3 s at 400 Hz
+	// GroundAccelNoise replaces AccelNoise while on the ground, where bumps swing the accel. 0 keeps AccelNoise.
+	GroundAccelNoise float32
 }
+
+// historyLen is how many past height changes are kept for late range readings.
+const historyLen = 128
 
 // Filter state is height Z (NED, down is positive), vertical speed VZ and accel bias.
 type Filter struct {
 	cfg Config
-	x   [3]float32
-	p   [3][3]float32
+	k   axis.Filter
 
 	baroRef     float32
 	baroRefSet  bool
 	rangeRef    float32
 	rangeRefSet bool
 	rangeAge    float32
+
+	history [historyLen]float32 // height change from each Predict
+	histN   int
+	lastDt  float32
+	ground  bool
 }
+
+// SetOnGround picks GroundAccelNoise while the vehicle sits on the ground.
+func (f *Filter) SetOnGround(ground bool) { f.ground = ground }
 
 // New returns a filter at zero height.
 func New(cfg Config) *Filter {
@@ -40,67 +54,65 @@ func New(cfg Config) *Filter {
 
 // Reset makes the current position the zero height point. Call it on the ground.
 func (f *Filter) Reset() {
-	f.x = [3]float32{}
-	f.p = [3][3]float32{{1, 0, 0}, {0, 1, 0}, {0, 0, 0.1}}
+	f.k.Reset(1, 1, 0.1)
 	f.baroRefSet = false
 	f.rangeRefSet = false
 	f.rangeAge = f.cfg.RangeHold + 1
+	f.histN = 0
 }
 
 // Z returns the height in m, NED so up is negative.
-func (f *Filter) Z() float32 { return f.x[0] }
+func (f *Filter) Z() float32 { return f.k.X[axis.Pos] }
 
 // VZ returns the vertical speed in m/s, NED so climbing is negative.
-func (f *Filter) VZ() float32 { return f.x[1] }
+func (f *Filter) VZ() float32 { return f.k.X[axis.Vel] }
 
 // Bias returns the estimated vertical accel bias in m/s².
-func (f *Filter) Bias() float32 { return f.x[2] }
+func (f *Filter) Bias() float32 { return f.k.X[axis.Bias] }
+
+// Ground returns the height above the ground in m from the range reference. Use it only while RangeActive.
+func (f *Filter) Ground() float32 { return f.rangeRef - f.k.X[axis.Pos] }
 
 // RangeActive reports whether a recent range reading is driving the height.
 func (f *Filter) RangeActive() bool { return f.rangeAge <= f.cfg.RangeHold }
 
 // Predict moves the state forward using earth frame vertical accel in m/s² with gravity removed.
 func (f *Filter) Predict(accelZ, dt float32) {
-	a := accelZ - f.x[2]
-	f.x[0] += f.x[1]*dt + 0.5*a*dt*dt
-	f.x[1] += a * dt
+	noise := f.cfg.AccelNoise
+	if f.ground && f.cfg.GroundAccelNoise > 0 {
+		noise = f.cfg.GroundAccelNoise
+	}
+	before := f.k.X[axis.Pos]
+	f.k.Predict(accelZ, dt, noise, f.cfg.BiasNoise)
 	f.rangeAge += dt
+	f.history[f.histN%historyLen] = f.k.X[axis.Pos] - before
+	f.histN++
+	f.lastDt = dt
+}
 
-	// P = F P Fᵀ + Q with F = [[1, dt, -dt²/2], [0, 1, -dt], [0, 0, 1]]
-	h := 0.5 * dt * dt
-	fm := [3][3]float32{{1, dt, -h}, {0, 1, -dt}, {0, 0, 1}}
-	var fp [3][3]float32
-	for i := range 3 {
-		for j := range 3 {
-			fp[i][j] = fm[i][0]*f.p[0][j] + fm[i][1]*f.p[1][j] + fm[i][2]*f.p[2][j]
-		}
+// heightBefore returns where the current estimate puts the vehicle RangeDelay ago. It takes off the
+// predicted movement since then, so corrections made in the meantime carry back too and are not repeated.
+func (f *Filter) heightBefore() float32 {
+	z := f.k.X[axis.Pos]
+	if f.cfg.RangeDelay <= 0 || f.lastDt <= 0 {
+		return z
 	}
-	for i := range 3 {
-		for j := range 3 {
-			f.p[i][j] = fp[i][0]*fm[j][0] + fp[i][1]*fm[j][1] + fp[i][2]*fm[j][2]
-		}
+	back := min(int(f.cfg.RangeDelay/f.lastDt+0.5), historyLen, f.histN)
+	for i := 1; i <= back; i++ {
+		z -= f.history[(f.histN-i)%historyLen]
 	}
-
-	// Accel noise enters through G = [dt²/2, dt, 0], bias noise as a random walk.
-	qa := f.cfg.AccelNoise * f.cfg.AccelNoise
-	g := [2]float32{h, dt}
-	for i := range 2 {
-		for j := range 2 {
-			f.p[i][j] += g[i] * g[j] * qa
-		}
-	}
-	f.p[2][2] += f.cfg.BiasNoise * f.cfg.BiasNoise * dt
+	return z
 }
 
 // UpdateBaro corrects with a baro height in m above sea level.
 func (f *Filter) UpdateBaro(alt float32) bool {
 	if !f.baroRefSet {
-		f.baroRef = alt + f.x[0]
+		f.baroRef = alt + f.k.X[axis.Pos]
 		f.baroRefSet = true
 	}
 	if f.RangeActive() {
 		// The baro drifts, so while range is good only its offset is tracked.
-		f.baroRef += f.cfg.BaroTrack * (alt + f.x[0] - f.baroRef)
+		f.baroRef += f.cfg.BaroTrack * (alt + f.k.X[axis.Pos] - f.baroRef)
 		return false
 	}
 	return f.update(f.baroRef-alt, f.cfg.BaroNoise)
@@ -117,34 +129,27 @@ func (f *Filter) UpdateRange(dist, cosTilt float32) bool {
 		// First reading after Reset, so the vehicle is on the ground at zero height.
 		f.rangeRef = h
 		f.rangeRefSet = true
-		f.x[0] = 0
+		f.k.X[axis.Pos] = 0
 	case !f.RangeActive():
 		// Pick up from the current height so the estimate does not jump.
-		f.rangeRef = h + f.x[0]
+		// The speed and bias may have drifted meanwhile, so let the range correct them quickly.
+		f.rangeRef = h + f.heightBefore()
+		f.k.P[axis.Vel][axis.Vel] = fmath.Max(f.k.P[axis.Vel][axis.Vel], 1)
+		f.k.P[axis.Bias][axis.Bias] = fmath.Max(f.k.P[axis.Bias][axis.Bias], 0.1)
+	}
+	// A late reading is compared with the height estimate from when it was taken, and the
+	// difference corrects the current state, as in delayed fusion in PX4 EKF2.
+	// Only accepted readings keep range active, so after a knock the next reading picks up afresh.
+	if !f.k.Correct(axis.Pos, -(h-f.rangeRef)-f.heightBefore(), f.cfg.RangeNoise, f.cfg.Gate) {
+		return false
 	}
 	f.rangeAge = 0
-	return f.update(-(h - f.rangeRef), f.cfg.RangeNoise)
+	return true
 }
 
 // update is a Kalman correction for a direct height measurement z with standard deviation sd.
 func (f *Filter) update(z, sd float32) bool {
-	innov := z - f.x[0]
-	s := f.p[0][0] + sd*sd
-	if f.cfg.Gate > 0 && innov*innov > f.cfg.Gate*f.cfg.Gate*s {
-		return false
-	}
-	var k [3]float32
-	for i := range 3 {
-		k[i] = f.p[i][0] / s
-		f.x[i] += k[i] * innov
-	}
-	row := f.p[0]
-	for i := range 3 {
-		for j := range 3 {
-			f.p[i][j] -= k[i] * row[j]
-		}
-	}
-	return true
+	return f.k.Update(axis.Pos, z, sd, f.cfg.Gate)
 }
 
 // BaroHeight returns the height in m of pressure pa above reference pressure ref, both in Pa, at tempC °C.
