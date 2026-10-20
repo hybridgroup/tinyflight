@@ -81,3 +81,14 @@ func TestThrustModel(t *testing.T) {
 		t.Errorf("full thrust gave %v", o.Value[0])
 	}
 }
+
+func TestThrustInvertsMix(t *testing.T) {
+	m := New(Config{Geometry: QuadX, ThrustModel: 1, Idle: 0.05})
+	var out msg.MotorOutputs
+	for _, thrust := range []float32{0, 0.2, 0.45, 0.8, 1} {
+		m.Mix(&msg.ThrustTorque{Thrust: thrust}, &out)
+		if got := m.Thrust(out.Value[0]); fmath.Abs(got-thrust) > 1e-4 {
+			t.Errorf("thrust %v mixed to %v and back to %v", thrust, out.Value[0], got)
+		}
+	}
+}

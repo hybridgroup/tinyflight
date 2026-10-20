@@ -95,6 +95,13 @@ func (m *Mixer) Mix(req *msg.ThrustTorque, out *msg.MotorOutputs) {
 }
 
 // command finds u where ThrustModel·u² + (1-ThrustModel)·u equals the wanted thrust t.
+// Thrust returns the thrust from 0 to 1 that Mix turns into motor command duty, ignoring torque.
+func (m *Mixer) Thrust(duty float32) float32 {
+	u := fmath.Clamp((duty-m.cfg.Idle)/(1-m.cfg.Idle), 0, 1)
+	k := m.cfg.ThrustModel
+	return k*u*u + (1-k)*u
+}
+
 func (m *Mixer) command(t float32) float32 {
 	k := m.cfg.ThrustModel
 	if k <= 0 {
