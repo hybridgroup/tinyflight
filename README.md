@@ -4,6 +4,8 @@
 
 Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1).
 
+![m5stamp fly](./images/m5stampfly.gif)
+
 See [docs/architecture.md](docs/architecture.md) for how it works. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it.
 
 ## Layout
@@ -32,10 +34,7 @@ Some pieces aren't merged upstream yet. Until they are, the build needs a TinyGo
 
 | PR | Change |
 |---|---|
-| [#5919](https://github.com/tinygo-org/tinygo/pull/5919) | cores scheduler wakes sleeping tasks on time |
-| [#5920](https://github.com/tinygo-org/tinygo/pull/5920) | ESP32-S3 SPI on any pins |
-| [#5921](https://github.com/tinygo-org/tinygo/pull/5921) | `m5stamp-fly` target |
-| [#5922](https://github.com/tinygo-org/tinygo/pull/5922) | ESP32 I2C without allocations |
+| [#5934](https://github.com/tinygo-org/tinygo/pull/5934) | machine/esp32s3: add flash BlockDevice support |
 
 **`../drivers-tinyflight`**, a tinygo-org/drivers checkout with these PR branches merged:
 

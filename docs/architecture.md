@@ -2,7 +2,7 @@
 
 Tinyflight is flight control firmware written in Go and built with TinyGo. This page explains how it works without assuming you know control theory.
 
-The design follows the [PX4 multicopter controller](https://docs.px4.io/main/en/flight_stack/controller_diagrams.html). Each job lives in its own small package, and each package only talks to the next one through plain data structs.
+The design is influenced by the [PX4 multicopter controller](https://docs.px4.io/main/en/flight_stack/controller_diagrams.html). Each job lives in its own small package, and each package only talks to the next one through plain data structs.
 
 ## The big picture
 
@@ -41,27 +41,27 @@ Z points down, so height above the takeoff point is a negative Z. A positive rol
 
 All the flight logic lives under `pkg/`. None of it imports hardware packages, so all of it runs and is tested with plain `go test` on a PC.
 
-| Package | PX4 equivalent | What it does |
-|---|---|---|
-| `pkg/fmath` | matrix library | Vectors and quaternions in float32. A quaternion is a compact way to store a 3D orientation. Trig comes from [tinymath](https://github.com/orsinium-labs/tinymath), good to about 0.003 rad. |
-| `pkg/msg` | uORB messages | The data structs passed between stages. |
-| `pkg/hal` | driver interfaces | Interfaces a board has to provide, such as `IMU`, `Baro` and `Motors`. |
-| `pkg/filter` | mathlib filters | Low-pass filters that remove fast jitter, and notch filters that remove one specific vibration frequency. |
-| `pkg/sensors` | sensors | Turns the chip's axes into body axes, measures gyro bias while sitting still on the ground, filters noise, and turns optical flow counts into rates. |
-| `pkg/estimator/attitude` | EKF2 attitude | Works out orientation. The gyro is accurate over short times but drifts, while gravity seen by the accelerometer is noisy but never drifts. This filter (Mahony) trusts the gyro moment to moment and slowly pulls toward gravity. |
-| `pkg/estimator/altitude` | EKF2 height | A small Kalman filter for height and climb rate. Vertical acceleration predicts the next value, then the barometer and the downward distance sensor correct it. A Kalman filter is a way to blend predictions and measurements based on how much each one can be trusted. |
-| `pkg/estimator/horizontal` | EKF2 optical flow | Another small Kalman filter, for north and east position and speed. The optical flow sensor sees the ground slide by. Taking out the part caused by turning and multiplying by the height gives the speed. |
-| `pkg/estimator/axis` | EKF2 core | The Kalman filter for position, speed and accel bias along one axis that the altitude and horizontal filters share. |
-| `pkg/control/pid` | PID library | A PID controller. It pushes harder the bigger the error (P), the longer the error lasts (I), and the faster it changes (D). |
-| `pkg/control/rate` | mc_rate_control | The innermost loop. It turns a spin rate setpoint into a torque. |
-| `pkg/control/attitude` | mc_att_control | Turns an orientation setpoint into spin rates for the rate loop. |
-| `pkg/control/position` | mc_pos_control | Height and position hold. Turns a height error into a climb rate, then a climb rate error into thrust. Turns a position error into a speed, then a speed error into a tilt. |
-| `pkg/mixer` | control_allocator | Splits thrust and torque into one command per motor. If the motors can't do everything asked, keeping level wins over thrust, and thrust wins over yaw. |
-| `pkg/commander` | commander | Arming checks, flight modes and failsafes. |
-| `pkg/input` | manual_control | Decodes pilot input, both from the M5 Atom Joystick and from text lines on USB serial. |
-| `pkg/params` | parameters | Every gain and limit in one struct. |
-| `pkg/flight` | the main loop | Connects all the stages and runs them at a fixed rate. |
-| `pkg/sim` | SITL | A physics model of a small quad with fake sensors, used for closed loop tests. |
+| Package | What it does |
+|---|---|
+| `pkg/fmath` | Vectors and quaternions in float32. A quaternion is a compact way to store a 3D orientation. Trig comes from [tinymath](https://github.com/orsinium-labs/tinymath), good to about 0.003 rad. |
+| `pkg/msg` | The data structs passed between stages. |
+| `pkg/hal` | Interfaces a board has to provide, such as `IMU`, `Baro` and `Motors`. |
+| `pkg/filter` | Low-pass filters that remove fast jitter, and notch filters that remove one specific vibration frequency. |
+| `pkg/sensors` | Turns the chip's axes into body axes, measures gyro bias while sitting still on the ground, filters noise, and turns optical flow counts into rates. |
+| `pkg/estimator/attitude` | Works out orientation. The gyro is accurate over short times but drifts, while gravity seen by the accelerometer is noisy but never drifts. This filter (Mahony) trusts the gyro moment to moment and slowly pulls toward gravity. |
+| `pkg/estimator/altitude` | A small Kalman filter for height and climb rate. Vertical acceleration predicts the next value, then the barometer and the downward distance sensor correct it. A Kalman filter is a way to blend predictions and measurements based on how much each one can be trusted. |
+| `pkg/estimator/horizontal` | Another small Kalman filter, for north and east position and speed. The optical flow sensor sees the ground slide by. Taking out the part caused by turning and multiplying by the height gives the speed. |
+| `pkg/estimator/axis` | The Kalman filter for position, speed and accel bias along one axis that the altitude and horizontal filters share. |
+| `pkg/control/pid` | A PID controller. It pushes harder the bigger the error (P), the longer the error lasts (I), and the faster it changes (D). |
+| `pkg/control/rate` | The innermost loop. It turns a spin rate setpoint into a torque. |
+| `pkg/control/attitude` | Turns an orientation setpoint into spin rates for the rate loop. |
+| `pkg/control/position` | Height and position hold. Turns a height error into a climb rate, then a climb rate error into thrust. Turns a position error into a speed, then a speed error into a tilt. |
+| `pkg/mixer` | Splits thrust and torque into one command per motor. If the motors can't do everything asked, keeping level wins over thrust, and thrust wins over yaw. |
+| `pkg/commander` | Arming checks, flight modes and failsafes. |
+| `pkg/input` | Decodes pilot input, both from the M5 Atom Joystick and from text lines on USB serial. |
+| `pkg/params` | Every gain and limit in one struct. |
+| `pkg/flight` | Connects all the stages and runs them at a fixed rate. |
+| `pkg/sim` | A physics model of a small quad with fake sensors, used for closed loop tests. |
 
 Hardware specific code lives outside `pkg/`:
 
@@ -74,68 +74,68 @@ Hardware specific code lives outside `pkg/`:
 
 ## How the packages connect
 
-This shows how the StampFly flight firmware reaches each package. Solid arrows are direct calls. Dotted arrows are calls through the `pkg/hal` interfaces, which the `devices/` adapters implement. `pkg/fmath` and `pkg/msg` are used almost everywhere, so they are left out.
+This shows the major parts of the StampFly flight firmware and how they fit together. Arrow labels show the data that moves between them. Every arrow between `devices` and `flight` goes through a `pkg/hal` interface. `pkg/fmath` and `pkg/msg` are used almost everywhere, so they are left out.
 
 ```mermaid
-flowchart TD
-    fw["firmware/stampfly"]
-
-    subgraph hw [Hardware specific]
-        board["boards/stampfly"]
-        devs["devices/bmi270, bmm150, bmp280,<br/>ina3221, pmw3901, vl53l3cx,<br/>pwmmotors, lineinput"]
-        espnow["devices/espnowinput"]
-        drivers["tinygo.org/x/drivers"]
+flowchart LR
+    subgraph tinyflight
+        subgraph firmware
+            fw[stampfly]
+        end
+        subgraph boards
+            board[stampfly]
+        end
+        fw--New, Config-->board
+        subgraph devin [devices]
+            chips[bmi270, bmm150, bmp280,<br/>ina3221, pmw3901, vl53l3cx]
+            radio[espnowinput, lineinput]
+        end
+        board--set up-->chips
+        board--set up-->radio
+        subgraph pkg
+            params
+            input
+            subgraph flight
+                sensors
+                subgraph estimators
+                    estatt[attitude]
+                    estalt[altitude]
+                    esthor[horizontal]
+                end
+                commander
+                subgraph controllers
+                    pos[position]
+                    att[attitude]
+                    rate
+                end
+                mixer
+            end
+            subgraph shared
+                filter
+                pid
+                axis
+            end
+        end
+        board--default gains-->params
+        params--gains-->flight
+        radio--decode-->input
+        chips--IMU, flow, baro, ToF-->sensors
+        radio--sticks-->commander
+        sensors--samples-->estimators
+        estimators--state-->commander
+        estimators--state-->pos
+        commander--mode, setpoints-->pos
+        pos--tilt, thrust-->att
+        att--spin rate-->rate
+        rate--torque-->mixer
+        flight-->shared
+        subgraph devout [devices]
+            motors[pwmmotors]
+        end
+        mixer--motor outputs-->motors
     end
-
-    subgraph core [pkg]
-        flight["pkg/flight"]
-        params["pkg/params"]
-        input["pkg/input"]
-        hal["pkg/hal"]
-        sensors["pkg/sensors"]
-        filter["pkg/filter"]
-        estatt["pkg/estimator/attitude"]
-        estalt["pkg/estimator/altitude"]
-        esthor["pkg/estimator/horizontal"]
-        estaxis["pkg/estimator/axis"]
-        commander["pkg/commander"]
-        pos["pkg/control/position"]
-        att["pkg/control/attitude"]
-        rate["pkg/control/rate"]
-        pid["pkg/control/pid"]
-        mixer["pkg/mixer"]
-    end
-
-    fw -->|New, Config| board
-    fw -->|Start| espnow
-    fw -->|New, RunDedicated, RunSensors| flight
-    fw -->|Merge, telemetry| input
-
-    board -->|set up chips| devs
-    board -->|default gains| params
-    devs --> drivers
-    devs -. implement .-> hal
-    espnow -. implement .-> hal
-    espnow --> input
-    devs --> input
-
-    flight -.->|read IMU, sensors, input,<br/>write motors| hal
-    flight --> sensors
-    flight --> estatt
-    flight --> estalt
-    flight --> esthor
-    flight --> commander
-    flight --> pos
-    flight --> att
-    flight --> rate
-    flight --> mixer
-
-    sensors --> filter
-    estalt --> estaxis
-    esthor --> estaxis
-    pos --> pid
-    rate --> pid
-    pid --> filter
+    devin-->drivers[tinygo.org/x/drivers]
+    devout-->drivers
 ```
 
 ## Why the controllers come in a chain
