@@ -6,6 +6,7 @@ import (
 	"time"
 
 	altest "github.com/hybridgroup/tinyflight/pkg/estimator/altitude"
+	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/hal"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 )
@@ -170,11 +171,24 @@ func (f *Flight) readBattery(now msg.Time) error {
 }
 
 // readFlow runs in the flight loop, so it writes straight to the loop's copy.
+// The sensor counts motion since the last read, so the rate uses the time since then.
 func (f *Flight) readFlow(now msg.Time) error {
+	last := f.flow.Time
 	if err := f.hw.Flow.ReadFlow(&f.flow); err != nil {
 		return err
 	}
 	f.flow.Time = now
+	var dt float32
+	if last != 0 && now > last {
+		dt = float32(now-last) * 1e-6
+	}
+	f.imu.Flow(&f.flow, dt)
+	f.flowMean = fmath.Vec3{}
+	if f.flowGyroN > 0 {
+		f.flowMean = f.flowGyro.Scale(1 / float32(f.flowGyroN))
+	}
+	f.flowGyro, f.flowGyroN = fmath.Vec3{}, 0
+	f.flowNew = true
 	return nil
 }
 
@@ -184,16 +198,21 @@ func (f *Flight) applySlowSensors() {
 		if f.baroRef == 0 {
 			f.baroRef = f.baro.Pressure
 		}
-		if f.altEst.UpdateBaro(altest.BaroHeight(f.baro.Pressure, f.baroRef, f.baro.Temperature)) {
+		h := altest.BaroHeight(f.baro.Pressure, f.baroRef, f.baro.Temperature)
+		ok := f.altEst.UpdateBaro(h)
+		if ok {
 			f.pos.ZValid = true
 		}
+		f.trace.Baro, f.trace.BaroNew, f.trace.BaroOK = h, true, ok
 	}
 	if f.slow.rng.take(&f.rng) && f.rng.Valid {
 		cosTilt := f.att.Q.Down().Z
 		f.pos.Ground = f.rng.Distance * cosTilt
-		if f.altEst.UpdateRange(f.rng.Distance, cosTilt) {
+		ok := f.altEst.UpdateRange(f.rng.Distance, cosTilt)
+		if ok {
 			f.pos.ZValid = true
 		}
+		f.trace.Range, f.trace.CosTilt, f.trace.RangeNew, f.trace.RangeOK = f.rng.Distance, cosTilt, true, ok
 	}
 	if f.slow.mag.take(&f.magRaw) {
 		f.imu.Mag(&f.magRaw, &f.magS)
