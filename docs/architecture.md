@@ -68,8 +68,10 @@ Hardware specific code lives outside `pkg/`:
 | Path | What it does |
 |---|---|
 | `devices/` | Adapters from the TinyGo drivers to the `pkg/hal` interfaces. Any board with the same chips can reuse them. |
-| `boards/stampfly` | Pins, sensor setup, IMU axis rotation, motor order and default gains for the M5Stack StampFly. |
+| `boards/stampfly` | Pins, sensor setup, IMU axis rotation, motor order and default gains for the M5Stack StampFly. The gains are in `config.go`, which builds anywhere so the sim can use them. |
+| `boards/sim` | A simulated StampFly built on `pkg/sim`, for running the firmware in a browser. See [simulator.md](simulator.md). |
 | `firmware/` | Programs you flash: the flight firmware and bench tools. |
+| `tools/tinyflightsim` | A local web server that builds the firmware with TinyGo to WebAssembly and flies it in the browser. It has its own `go.mod`. |
 | `tools/estimate` | Host-only checks against [go-estimate](https://github.com/milosgajdos/go-estimate). It has its own `go.mod`, so gonum never gets into the firmware. |
 
 ## How the packages connect
@@ -192,7 +194,7 @@ On a dual core chip like the ESP32-S3, built with `-scheduler=cores`, the two co
 
 `RunSensors` reads the slow sensors on core 0. It hands each new reading to the flight loop through a small locked mailbox, and the loop picks it up on its next pass. The ToF sensor alone takes about 5 ms per reading, which is two whole loop passes, so keeping it off core 1 matters.
 
-On a single core, or in the simulator, the loop reads at most one slow sensor per pass instead, so no single pass takes too long.
+On a single core, in the closed loop tests or in the browser sim, the loop reads at most one slow sensor per pass instead, so no single pass takes too long.
 
 `flight.Stats` records overruns, jitter and the slowest pass. The flight loop never allocates memory after startup. `TestStepDoesNotAllocate` checks this, because a garbage collection pause in the middle of flight would cause a twitch.
 

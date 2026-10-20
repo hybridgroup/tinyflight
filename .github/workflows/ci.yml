@@ -18,13 +18,29 @@ jobs:
       - name: Check formatting
         run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
 
-      # devices, boards and firmware need the local drivers checkout listed in README.md
+      # devices, boards/stampfly and the StampFly firmware need the local drivers checkout listed in README.md
       - name: Vet
-        run: go vet ./pkg/...
+        run: go vet ./pkg/... ./boards/sim/...
 
       - name: Test
-        run: go test ./pkg/...
+        run: go test ./pkg/... ./boards/sim/...
 
       - name: Test tools/estimate
         working-directory: tools/estimate
         run: go test ./...
+
+      - name: Test tools/tinyflightsim
+        working-directory: tools/tinyflightsim
+        run: go vet ./... && go test ./...
+
+  sim-firmware:
+    runs-on: ubuntu-latest
+    container: tinygo/tinygo-dev:latest
+    env:
+      # Git in the container may not trust the checkout, and the sim build needs no VCS stamp.
+      GOFLAGS: -buildvcs=false
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the firmware for tinyflightsim
+        run: tinygo build -target=wasip1 -tags=tinyflightsim -no-debug -o /tmp/firmware.wasm ./firmware/stampfly
