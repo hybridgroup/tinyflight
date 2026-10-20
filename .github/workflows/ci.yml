@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+      # devices, boards and firmware need the local drivers and espradio checkouts listed in README.md
+      - name: Vet
+        run: go vet ./pkg/...
+
+      - name: Test
+        run: go test ./pkg/...
+
+      - name: Test tools/estimate
+        working-directory: tools/estimate
+        run: go test ./...
