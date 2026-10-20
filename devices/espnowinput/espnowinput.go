@@ -36,8 +36,10 @@ type Input struct {
 	Packets  atomic.Uint32
 	Rejected atomic.Uint32
 	// Sent and SendFailed count telemetry packets. A broadcast gets no reply, so Sent only means it was queued.
-	Sent       atomic.Uint32
-	SendFailed atomic.Uint32
+	Sent         atomic.Uint32
+	SendFailed   atomic.Uint32
+	CameraSent   atomic.Uint32
+	CameraFailed atomic.Uint32
 }
 
 // Start brings up the radio on Channel, listens for the joystick, and announces this vehicle until it pairs.
@@ -91,6 +93,28 @@ func (in *Input) RunTelemetry(every time.Duration, fill func(t *input.AtomTeleme
 			in.SendFailed.Add(1)
 		} else {
 			in.Sent.Add(1)
+		}
+	}
+}
+
+// RunCamera broadcasts camera frames forever once a joystick has paired. read fills the next
+// frame and reports false when there is none. It runs on core 0 and does not allocate.
+func (in *Input) RunCamera(every time.Duration, read func(f *input.CameraFrame) bool) {
+	espradio.LockToCore0()
+	defer espradio.UnlockFromCore0()
+	var f input.CameraFrame
+	var pkt [input.CameraPacketMax]byte
+	addr := [6]byte(espradio.ESPNowBroadcastAddr)
+	for {
+		time.Sleep(every)
+		if !in.paired.Load() || !read(&f) {
+			continue
+		}
+		n := f.Encode(&pkt)
+		if espradio.ESPNowSend(&addr, pkt[:n]) != nil {
+			in.CameraFailed.Add(1)
+		} else {
+			in.CameraSent.Add(1)
 		}
 	}
 }

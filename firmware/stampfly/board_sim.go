@@ -22,3 +22,4 @@ func radioPackets() uint32    { return simboard.Board().Joystick.Packets }
 func radioRejected() uint32   { return simboard.Board().Joystick.Rejected }
 func telemetrySent() uint32   { return simboard.TelemetrySent }
 func telemetryFailed() uint32 { return 0 }
+func cameraSent() uint32      { return 0 }

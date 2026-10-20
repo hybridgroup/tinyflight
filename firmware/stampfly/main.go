@@ -47,7 +47,7 @@ func report(f *flight.Flight) {
 			"z_mm", int(f.Position().Z*1000), "xy_mm", int(f.Position().X*1000), int(f.Position().Y*1000), f.Position().XYValid, "batt_mV", int(f.Battery().Voltage*1000),
 			"overruns", st.Overruns, "step_us", st.MaxStep.Microseconds(),
 			"motors_fl_fr_rl_rr", milli(m[0]), milli(m[1]), milli(m[2]), milli(m[3]),
-			"radio_ok", radioPackets(), "radio_bad", radioRejected(), "tel_sent", telemetrySent(), "tel_failed", telemetryFailed(),
+			"radio_ok", radioPackets(), "radio_bad", radioRejected(), "tel_sent", telemetrySent(), "tel_failed", telemetryFailed(), "cam_sent", cameraSent(),
 			"in_rpy_thr_climb", milli(in.Roll), milli(in.Pitch), milli(in.Yaw), milli(in.Throttle), milli(in.Climb), "in_arm", in.Arm,
 			"gc", ms.NumGC-lastGC, "mallocs", ms.Mallocs-lastMallocs, "heap_kb", ms.HeapAlloc/1024)
 		lastGC, lastMallocs = ms.NumGC, ms.Mallocs
