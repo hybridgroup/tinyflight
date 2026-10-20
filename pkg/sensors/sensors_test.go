@@ -66,3 +66,19 @@ func TestCalibrationRestartsOnMotion(t *testing.T) {
 		t.Error("did not calibrate once still")
 	}
 }
+
+func TestFlow(t *testing.T) {
+	cfg := testConfig()
+	cfg.FlowRotation = fmath.Mat3{{0, -1, 0}, {1, 0, 0}, {0, 0, 1}}
+	cfg.FlowScale = 0.002
+	p := NewIMU(cfg)
+	s := msg.FlowSample{DeltaX: 10, DeltaY: -20, Valid: true}
+	p.Flow(&s, 0.01)
+	if want := (fmath.Vec3{X: 4, Y: 2}); s.Rate.Sub(want).Norm() > 1e-5 || !s.Valid {
+		t.Errorf("rate %v valid %v, want %v", s.Rate, s.Valid, want)
+	}
+	p.Flow(&s, 0)
+	if s.Valid {
+		t.Error("valid with no time between readings")
+	}
+}

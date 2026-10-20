@@ -23,6 +23,8 @@ func (d *Flow) ReadFlow(s *msg.FlowSample) error {
 	s.DeltaX = m.DeltaX
 	s.DeltaY = m.DeltaY
 	s.Quality = m.Squal
-	s.Valid = m.Valid()
+	// m.Valid is false whenever nothing moved, but zero motion is a good reading, so check only the surface.
+	// Low surface check from get_motion in https://github.com/pimoroni/pmw3901-python
+	s.Valid = !(m.Squal < 0x19 && m.Shutter>>8 == 0x1F)
 	return nil
 }
