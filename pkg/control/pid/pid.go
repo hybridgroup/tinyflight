@@ -38,6 +38,11 @@ func (c *PID) Reset() {
 	c.dFilter.Reset()
 }
 
+// SetIntegral sets the output held by the I term, within the integral limit.
+func (c *PID) SetIntegral(v float32) {
+	c.integral = fmath.Clamp(v, -c.cfg.IntegralLimit, c.cfg.IntegralLimit)
+}
+
 // Integral returns the current output held by the I term.
 func (c *PID) Integral() float32 { return c.integral }
 

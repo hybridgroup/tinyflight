@@ -1,5 +1,5 @@
-// Package position holds a height by turning height error into a climb rate, then climb rate error into thrust.
-// Same role as the vertical part of mc_pos_control in PX4. Horizontal hold comes later.
+// Package position holds a height by turning height error into a climb rate, then climb rate error into thrust,
+// and a position by turning position error into a speed, then speed error into tilt. Same role as mc_pos_control in PX4.
 package position
 
 import (
@@ -16,18 +16,24 @@ type Config struct {
 	MaxDescend  float32 // m/s
 	MinThrust   float32
 	MaxThrust   float32
+	// MaxHover caps thrust at this multiple of hover thrust, so a wrong height estimate cannot run off at full power. 0 for no cap.
+	MaxHover float32
 }
 
 // Vertical turns a height setpoint into collective thrust.
 type Vertical struct {
 	cfg   Config
 	climb pid.PID
+	hover float32
 }
 
 // NewVertical returns a height controller using cfg.
 func NewVertical(cfg Config) *Vertical {
-	return &Vertical{cfg: cfg, climb: pid.New(cfg.Climb)}
+	return &Vertical{cfg: cfg, climb: pid.New(cfg.Climb), hover: cfg.HoverThrust}
 }
+
+// SetHover replaces the hover thrust from the config, for example with one worked out from the battery voltage.
+func (c *Vertical) SetHover(thrust float32) { c.hover = thrust }
 
 // Reset clears the climb rate integrator.
 func (c *Vertical) Reset() { c.climb.Reset() }
@@ -39,6 +45,10 @@ func (c *Vertical) Update(zSetpoint, z, vz, climbFF, cosTilt, dt float32) float3
 	climbSp = fmath.Clamp(climbSp, -c.cfg.MaxDescend, c.cfg.MaxClimb)
 	u := c.climb.Update(climbSp, -vz, dt)
 	// Tilting points some thrust sideways, so add more to keep the same lift.
-	thrust := (c.cfg.HoverThrust + u) / fmath.Max(cosTilt, 0.5)
-	return fmath.Clamp(thrust, c.cfg.MinThrust, c.cfg.MaxThrust)
+	thrust := (c.hover + u) / fmath.Max(cosTilt, 0.5)
+	hi := c.cfg.MaxThrust
+	if c.cfg.MaxHover > 0 {
+		hi = fmath.Min(hi, c.cfg.MaxHover*c.hover)
+	}
+	return fmath.Clamp(thrust, c.cfg.MinThrust, hi)
 }

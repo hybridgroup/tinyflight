@@ -75,7 +75,7 @@ func (c *Commander) Update(s State) msg.VehicleStatus {
 		return *st
 	}
 
-	if (st.Mode == msg.ModeStabilize || st.Mode == msg.ModeAltHold) && s.Tilt > c.cfg.MaxTilt {
+	if st.Mode != msg.ModeAcro && s.Tilt > c.cfg.MaxTilt {
 		c.disarm()
 		st.Failsafe = msg.FailsafeTilt
 		return *st
@@ -125,6 +125,9 @@ func (c *Commander) land(now msg.Time, f msg.Failsafe) {
 	c.status.Failsafe = f
 	c.landStart = now
 }
+
+// Disarm stops the motors, for example when the flight loop sees the vehicle has landed.
+func (c *Commander) Disarm() { c.disarm() }
 
 func (c *Commander) disarm() {
 	c.status.Armed = false
