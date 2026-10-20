@@ -5,6 +5,7 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/input"
+	"github.com/hybridgroup/tinyflight/pkg/mixer"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 	"github.com/hybridgroup/tinyflight/pkg/params"
 	physics "github.com/hybridgroup/tinyflight/pkg/sim"
@@ -32,6 +33,7 @@ func New(cfg params.Config) *World {
 	p.FlowScale = cfg.Sensors.FlowScale
 	p.RangeDelay = cfg.AltEst.RangeDelay
 	q := physics.New(p)
+	q.Disturb = imbalance(cfg, p)
 	w := &World{Quad: q, dt: 1 / cfg.LoopHz}
 	w.Joystick.dec = input.NewAtomJoystick(MAC)
 	w.Hardware = flight.Hardware{
@@ -45,6 +47,26 @@ func New(cfg params.Config) *World {
 		LED:    &w.LED,
 	}
 	return w
+}
+
+// imbalance is the steady torque that cfg.Rate.Trim cancels at hover. The real StampFly needs that
+// trim to lift off level, see boards/stampfly/config.go, so the model gets the same imbalance.
+func imbalance(cfg params.Config, p physics.Params) fmath.Vec3 {
+	hover := cfg.Hover.Offset + cfg.Hover.Slope*p.Voltage
+	if cfg.Hover.Slope == 0 {
+		hover = cfg.Vertical.HoverThrust
+	}
+	m := mixer.New(cfg.Mixer)
+	var level, trimmed msg.MotorOutputs
+	m.Mix(&msg.ThrustTorque{Thrust: hover}, &level)
+	m.Mix(&msg.ThrustTorque{Thrust: hover, Torque: cfg.Rate.Trim}, &trimmed)
+	var t fmath.Vec3
+	for i, g := range p.Geometry {
+		a, b := trimmed.Value[i], level.Value[i]
+		d := p.MaxThrust * (a*a - b*b)
+		t = t.Add(fmath.Vec3{X: g.Roll * p.Arm * d, Y: g.Pitch * p.Arm * d, Z: g.Yaw * p.YawCoef * d})
+	}
+	return t.Scale(-1)
 }
 
 // Now is the simulated time since power on.

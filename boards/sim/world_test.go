@@ -90,17 +90,21 @@ func TestAltHoldHover(t *testing.T) {
 	if r.f.Status().Mode != msg.ModeAltHold {
 		t.Fatalf("mode %v", r.f.Status().Mode)
 	}
+	var liftTilt float32
 	r.s.throttle = 1
-	r.fly(2, nil)
+	r.fly(2, func() { liftTilt = fmath.Max(liftTilt, r.w.Quad.Q.Tilt()) })
 	r.s.throttle = 0
 	r.fly(3, nil)
+	if liftTilt > fmath.Radians(3) {
+		t.Errorf("tilted %.1f° on takeoff", fmath.Degrees(liftTilt))
+	}
 	start := -r.w.Quad.Pos.Z
 	if start < 0.5 || start > 1.3 {
 		t.Fatalf("height after takeoff %v m", start)
 	}
 	var maxErr float32
 	r.fly(5, func() { maxErr = fmath.Max(maxErr, fmath.Abs(-r.w.Quad.Pos.Z-start)) })
-	t.Logf("hover at %.2f m, height error %.3f m", start, maxErr)
+	t.Logf("hover at %.2f m, height error %.3f m, takeoff tilt %.1f°", start, maxErr, fmath.Degrees(liftTilt))
 	if maxErr > 0.15 {
 		t.Errorf("height wandered %v m", maxErr)
 	}
