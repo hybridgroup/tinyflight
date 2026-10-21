@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hybridgroup/tinyflight/boards/stampfly"
-	"github.com/hybridgroup/tinyflight/devices/amg88xx"
 	"github.com/hybridgroup/tinyflight/devices/espnowinput"
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 	"github.com/hybridgroup/tinyflight/pkg/input"
@@ -29,7 +28,6 @@ func setup() (flight.Hardware, bool) {
 		mac := radio.MAC()
 		println("esp-now ready, mac", hex(mac[0]), hex(mac[1]), hex(mac[2]), hex(mac[3]), hex(mac[4]), hex(mac[5]))
 		joystick = radio
-		camera = b.Camera
 		b.Hardware.Input = input.Merge{radio, b.Hardware.Input}
 	}
 	return b.Hardware, true
@@ -38,11 +36,6 @@ func setup() (flight.Hardware, bool) {
 func startTelemetry(f *flight.Flight) {
 	if joystick != nil {
 		go joystick.RunTelemetry(100*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) })
-	}
-	if joystick != nil && camera != nil {
-		println("camera found")
-		// The driver Configure sets the AMG88xx to 10 frames per second.
-		go joystick.RunCamera(100*time.Millisecond, func(fr *input.CameraFrame) bool { return camera.ReadFrame(fr) == nil })
 	}
 }
 
@@ -65,10 +58,7 @@ func startOnCores(f *flight.Flight) {
 	f.RunDedicated()
 }
 
-var (
-	joystick *espnowinput.Input
-	camera   *amg88xx.Camera
-)
+var joystick *espnowinput.Input
 
 func radioPackets() uint32 {
 	if joystick == nil {
@@ -96,11 +86,4 @@ func radioRejected() uint32 {
 		return 0
 	}
 	return joystick.Rejected.Load()
-}
-
-func cameraSent() uint32 {
-	if joystick == nil {
-		return 0
-	}
-	return joystick.CameraSent.Load()
 }

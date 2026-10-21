@@ -35,14 +35,14 @@ Before connecting SDA and SCL to the StampFly, power it up and check that regula
 
 Point the sensor forward or down and fix it so it cannot touch a propeller.
 
-At power on the firmware looks for the sensor at I2C address 0x69, then 0x68. If it finds one, it prints `camera found` over USB. If not, the drone flies as before.
+At power on the firmware looks for the sensor at I2C address 0x69, then 0x68. If it finds one, it prints `camera found` over USB. If not, it prints `no camera` and flies without it.
 
 ## Flashing
 
-The drone needs the normal flight firmware. See the [README](../README.md#building-for-the-stampfly).
+The drone needs the camera flight firmware. It flies like `firmware/stampfly` and also sends the frames. See the [README](../README.md#building-for-the-stampfly).
 
 ```
-tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly
+tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-camera
 ```
 
 Then flash the receiver onto the ESP32-C3. For another ESP32-C3 board, use its TinyGo target.
@@ -68,6 +68,6 @@ The page shows the image, the coldest, hottest and center temperatures, and the 
 
 - The drone reads the sensor every 100 ms on core 0. The flight loop on core 1 is not touched.
 - Frames are only sent once the joystick has paired, since the joystick checks every packet while pairing. After that it ignores camera packets.
-- Each frame is one 139 byte broadcast, about 1.4 kB/s. The `cam_sent` count in the USB printout shows how many went out.
+- Each frame is one 139 byte broadcast, about 1.4 kB/s. The `cam_sent` and `cam_failed` counts in the USB printout show how many went out.
 - The receiver only listens and never sends.
 - The receiver prints each frame as a line `cam seq format width height chunk chunks count pixels... sum`. The viewer drops any line where the sum does not match.
