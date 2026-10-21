@@ -9,7 +9,6 @@ import (
 	"machine"
 	"time"
 
-	"github.com/hybridgroup/tinyflight/devices/amg88xx"
 	"github.com/hybridgroup/tinyflight/devices/bmi270"
 	"github.com/hybridgroup/tinyflight/devices/bmm150"
 	"github.com/hybridgroup/tinyflight/devices/bmp280"
@@ -20,7 +19,6 @@ import (
 	"github.com/hybridgroup/tinyflight/devices/vl53l3cx"
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 
-	drvamg88xx "tinygo.org/x/drivers/amg88xx"
 	drvbmi270 "tinygo.org/x/drivers/bmi270"
 	drvbmm150 "tinygo.org/x/drivers/bmm150"
 	drvbmp280 "tinygo.org/x/drivers/bmp280"
@@ -43,9 +41,7 @@ type Board struct {
 	Hardware flight.Hardware
 	Motors   *pwmmotors.Motors
 	FrontToF *drvvl53l3cx.Device
-	// Camera is an optional AMG88xx on the Grove port. It is nil when none is plugged in.
-	Camera *amg88xx.Camera
-	Errors []error
+	Errors   []error
 }
 
 // New starts every bus and sensor. The motors are stopped when it returns.
@@ -109,27 +105,8 @@ func New() *Board {
 
 	b.setupToF(i2c)
 
-	b.setupCamera()
-
 	b.Hardware.Input = lineinput.New(machine.Serial)
 	return b
-}
-
-// setupCamera looks for a thermal camera on the Grove port, which has its own I2C bus.
-// It is optional, so a missing one is not an error.
-func (b *Board) setupCamera() {
-	i2c := machine.I2C1
-	if i2c.Configure(machine.I2CConfig{Frequency: i2cHz, SDA: machine.GROVE_SDA, SCL: machine.GROVE_SCL}) != nil {
-		return
-	}
-	for _, addr := range []uint16{drvamg88xx.AddressHigh, drvamg88xx.AddressLow} {
-		dev := drvamg88xx.New(i2c)
-		dev.Address = addr
-		if dev.Configure(drvamg88xx.Config{}) == nil {
-			b.Camera = amg88xx.New(&dev)
-			return
-		}
-	}
 }
 
 func (b *Board) setupMotors() *pwmmotors.Motors {
