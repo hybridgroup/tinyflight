@@ -62,6 +62,8 @@ go run . -port /dev/ttyACM0
 
 Then open http://localhost:8081. On macOS the port looks like `/dev/cu.usbmodem1101`, and on Windows like `COM3`.
 
+![cameraview](../images/cameraview.png)
+
 The page shows the image, the coldest, hottest and center temperatures, and the frame rate. Hover over the image to read any spot. Range picks the color scale, and Smooth blends between the 8 by 8 pixels.
 
 ## Testing on the bench

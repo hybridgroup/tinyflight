@@ -13,6 +13,7 @@ Flight control firmware written in Go and built with [TinyGo](https://tinygo.org
 - Arming checks, plus failsafes for lost pilot input, low battery, crashes and IMU failure
 - Pure Go flight stack with full set of tests, including closed loop tests on a simulated quad
 - tinyflightsim, a browser flight sim that runs the real firmware as WebAssembly, flown with an on-screen Atom Joystick
+- Live images from an optional AMG8833 thermal camera, sent over ESP-NOW and shown in the browser
 - Bench control with text lines over USB serial
 - Optional blackbox flight log saved to flash
 
@@ -31,6 +32,12 @@ See [docs/architecture.md](docs/architecture.md) for architectural details. See 
 Fly the real firmware in a web browser before you fly the drone. See [Flying in the browser sim](#flying-in-the-browser-sim).
 
 ![tinyflightsim](images/tinyflightsim.png)
+
+## Cameras
+
+Stream live images from an optional AMG8833 thermal camera while you fly, and watch them in the browser with `tools/cameraview`. See [docs/camera.md](docs/camera.md).
+
+![cameraview](images/cameraview.png)
 
 ## Layout
 
