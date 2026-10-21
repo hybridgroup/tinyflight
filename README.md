@@ -62,27 +62,11 @@ Then open http://localhost:8080. The server builds `firmware/stampfly` with Tiny
 
 ## Building for the StampFly
 
-Some pieces aren't merged upstream yet. Until they are, the build needs a TinyGo built with these PRs, and a local drivers checkout next to this repo.
-
-**TinyGo**, with these PRs merged into `dev`:
+The build needs a TinyGo built with this PR merged into `dev`:
 
 | PR | Change |
 |---|---|
 | [#5934](https://github.com/tinygo-org/tinygo/pull/5934) | machine/esp32s3: add flash BlockDevice support |
-
-**`../drivers-tinyflight`**, a tinygo-org/drivers checkout with these PR branches merged:
-
-| PR | Driver |
-|---|---|
-| [#912](https://github.com/tinygo-org/drivers/pull/912) | vl53l3cx |
-| [#913](https://github.com/tinygo-org/drivers/pull/913) | bmm150 |
-| [#915](https://github.com/tinygo-org/drivers/pull/915) | bmp280 |
-| [#916](https://github.com/tinygo-org/drivers/pull/916) | ina3221 |
-| [#917](https://github.com/tinygo-org/drivers/pull/917) | bmi270 |
-| [#918](https://github.com/tinygo-org/drivers/pull/918) | pmw3901 |
-| [#919](https://github.com/tinygo-org/drivers/pull/919) | amg88xx |
-
-`go.mod` points at the local checkout with a `replace` line. It goes away once the PRs merge.
 
 Build with the cores scheduler, so the flight loop gets a core to itself:
 

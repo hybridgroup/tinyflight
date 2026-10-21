@@ -18,12 +18,11 @@ jobs:
       - name: Check formatting
         run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
 
-      # devices, boards/stampfly and the StampFly firmware need the local drivers checkout listed in README.md
       - name: Vet
-        run: go vet ./pkg/... ./boards/sim/...
+        run: go vet ./...
 
       - name: Test
-        run: go test ./pkg/... ./boards/sim/...
+        run: go test ./...
 
       - name: Test tools/estimate
         working-directory: tools/estimate
