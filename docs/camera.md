@@ -64,7 +64,7 @@ Then open http://localhost:8081. On macOS the port looks like `/dev/cu.usbmodem1
 
 ![cameraview](../images/cameraview.png)
 
-The page shows the image, the coldest, hottest and center temperatures, and the frame rate. Hover over the image to read any spot. Range picks the color scale, and Smooth blends between the 8 by 8 pixels.
+The page shows the image, the coldest, hottest and center temperatures, and the frame rate. Hover over the image to read any spot. Range picks the color scale, and Smooth blends between the 8 by 8 pixels. Auto keeps the scale at least 8 °C wide, so an empty scene stays calm instead of showing the sensor noise. Flip vertical and Flip horizontal match how the camera is mounted, and the browser remembers them. Check both to turn the image upside down.
 
 ## Testing on the bench
 
@@ -86,6 +86,7 @@ Then open http://localhost:8081. A hand in front of the sensor shows as a warm s
 ## How it works
 
 - The drone reads the sensor every 100 ms on core 0. The flight loop on core 1 is not touched.
+- The sensor averages each pixel over two frames, from the AVE register in the Grid-EYE datasheet. On the bench this cut the noise from 0.40 °C to 0.27 °C per pixel.
 - Frames are only sent once the joystick has paired, since the joystick checks every packet while pairing. After that it ignores camera packets.
 - Each frame is one 139 byte broadcast, about 1.4 kB/s. The `cam_sent` and `cam_failed` counts in the USB printout show how many went out.
 - The receiver only listens and never sends.
