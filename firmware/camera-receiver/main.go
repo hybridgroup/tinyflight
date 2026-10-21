@@ -8,7 +8,6 @@ package main
 
 import (
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/hybridgroup/tinyflight/devices/espnowinput"
@@ -30,7 +29,7 @@ func main() {
 	println("camera receiver ready on channel", espnowinput.Channel)
 	var line []byte
 	for f := range frames {
-		line = appendLine(line[:0], &f)
+		line = input.AppendCameraLine(line[:0], &f)
 		os.Stdout.Write(line)
 	}
 }
@@ -61,29 +60,4 @@ func receive(r espradio.ESPNowReceive) {
 	case frames <- f:
 	default:
 	}
-}
-
-// appendLine writes "cam seq format width height chunk chunks count pixels... sum",
-// where sum adds every value before it so the viewer can drop damaged lines.
-func appendLine(b []byte, f *input.CameraFrame) []byte {
-	b = append(b, "cam"...)
-	var sum int64
-	put := func(v int64) {
-		b = append(b, ' ')
-		b = strconv.AppendInt(b, v, 10)
-		sum += v
-	}
-	put(int64(f.Seq))
-	put(int64(f.Format))
-	put(int64(f.Width))
-	put(int64(f.Height))
-	put(int64(f.Chunk))
-	put(int64(f.Chunks))
-	put(int64(f.Count))
-	for _, p := range f.Pixels[:f.Count] {
-		put(int64(p))
-	}
-	b = append(b, ' ')
-	b = strconv.AppendInt(b, sum, 10)
-	return append(b, '\n')
 }
