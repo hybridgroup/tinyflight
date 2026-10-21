@@ -26,6 +26,8 @@ const ctx = image.getContext('2d');
 const status = document.getElementById('status');
 const rangeSel = document.getElementById('range');
 const smooth = document.getElementById('smooth');
+const flipV = document.getElementById('flip-v');
+const flipH = document.getElementById('flip-h');
 const cursor = document.getElementById('cursor');
 const $ = (id) => document.getElementById(id);
 
@@ -39,19 +41,26 @@ for (let y = 0; y < 256; y++) {
 let last = null;
 let times = [];
 let mouse = null;
+let auto = null;
+
+// The sensor noise is about 0.3 °C, so a narrow auto range turns an empty scene into color noise.
+const minSpan = 8;
 
 function range(values) {
   switch (rangeSel.value) {
     case 'room': return [15, 40];
     case 'wide': return [0, 80];
   }
-  let lo = Math.min(...values), hi = Math.max(...values);
-  if (hi - lo < 2) {
-    const mid = (hi + lo) / 2;
-    lo = mid - 1;
-    hi = mid + 1;
-  }
-  return [lo, hi];
+  const lo = Math.min(...values);
+  const hi = Math.max(Math.max(...values), lo + minSpan);
+  // Ease toward the new range so the colors do not flicker from frame to frame.
+  auto = auto ? auto.map((v, i) => v + ([lo, hi][i] - v) * 0.2) : [lo, hi];
+  return auto;
+}
+
+// view maps a fractional position on the screen to one on the sensor, for a flipped mount.
+function view(fx, fy) {
+  return [flipH.checked ? 1 - fx : fx, flipV.checked ? 1 - fy : fy];
 }
 
 // sample reads the image at fractional pixel coordinates, bilinear when smoothing.
@@ -76,10 +85,9 @@ function draw() {
   const size = image.width;
   const img = ctx.createImageData(size, size);
   for (let py = 0; py < size; py++) {
-    const y = ((py + 0.5) / size) * h - 0.5;
     for (let px = 0; px < size; px++) {
-      const x = ((px + 0.5) / size) * w - 0.5;
-      const v = sample(values, w, h, x, y);
+      const [fx, fy] = view((px + 0.5) / size, (py + 0.5) / size);
+      const v = sample(values, w, h, fx * w - 0.5, fy * h - 0.5);
       const [r, g, b] = lut[Math.round(Math.min(1, Math.max(0, (v - lo) / (hi - lo))) * 255)];
       const i = (py * size + px) * 4;
       img.data[i] = r;
@@ -106,7 +114,8 @@ function showCursor() {
     return;
   }
   const { width: w, height: h, values } = last;
-  const v = sample(values, w, h, mouse.fx * w - 0.5, mouse.fy * h - 0.5);
+  const [fx, fy] = view(mouse.fx, mouse.fy);
+  const v = sample(values, w, h, fx * w - 0.5, fy * h - 0.5);
   cursor.hidden = false;
   cursor.style.left = `${mouse.x}px`;
   cursor.style.top = `${mouse.y}px`;
@@ -122,8 +131,24 @@ image.addEventListener('mouseleave', () => {
   mouse = null;
   showCursor();
 });
-rangeSel.addEventListener('change', draw);
+rangeSel.addEventListener('change', () => {
+  auto = null;
+  draw();
+});
 smooth.addEventListener('change', draw);
+
+// Remember the flips for this browser, since they follow how the camera is mounted.
+for (const box of [flipV, flipH]) {
+  try {
+    box.checked = localStorage.getItem(box.id) === '1';
+  } catch {}
+  box.addEventListener('change', () => {
+    try {
+      localStorage.setItem(box.id, box.checked ? '1' : '0');
+    } catch {}
+    draw();
+  });
+}
 
 function setStatus(text, cls) {
   status.textContent = text;

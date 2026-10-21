@@ -20,7 +20,11 @@ func NewCamera() *amg88xx.Camera {
 	for _, addr := range []uint16{drvamg88xx.AddressHigh, drvamg88xx.AddressLow} {
 		dev := drvamg88xx.New(i2c)
 		dev.Address = addr
-		if dev.Configure(drvamg88xx.Config{}) == nil {
+		if dev.Configure(drvamg88xx.Config{}) != nil {
+			continue
+		}
+		// The sensor averages each pixel over two frames, which cuts the noise by about a third.
+		if dev.SetMovingAverageMode(true) == nil {
 			return amg88xx.New(&dev)
 		}
 	}
