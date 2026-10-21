@@ -94,7 +94,7 @@ func New() *Board {
 	}
 
 	mag := drvbmm150.New(i2c)
-	if b.check("bmm150", mag.Configure(drvbmm150.Config{DataRate: drvbmm150.DataRate20Hz})) {
+	if b.check("bmm150", mag.Configure(drvbmm150.Config{DataRate: drvbmm150.DataRate30Hz})) {
 		b.Hardware.Mag = bmm150.New(mag)
 	}
 
