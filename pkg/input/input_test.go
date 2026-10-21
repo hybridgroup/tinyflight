@@ -148,6 +148,14 @@ func TestCameraRoundTrip(t *testing.T) {
 	}
 }
 
+func TestAppendCameraLine(t *testing.T) {
+	f := CameraFrame{Seq: 7, Format: CameraThermal, Width: 2, Height: 1, Chunks: 1, Count: 2}
+	f.Pixels[0], f.Pixels[1] = 100, -4
+	if got, want := string(AppendCameraLine(nil, &f)), "cam 7 1 2 1 0 1 2 100 -4 110\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 func TestCameraRejects(t *testing.T) {
 	var p [CameraPacketMax]byte
 	f := CameraFrame{Format: CameraThermal, Width: 8, Height: 8, Chunks: 1, Count: 64}

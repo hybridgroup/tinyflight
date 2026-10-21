@@ -3,6 +3,7 @@ package input
 import (
 	"encoding/binary"
 	"errors"
+	"strconv"
 )
 
 var ErrNotCamera = errors.New("input: not a camera packet")
@@ -73,6 +74,31 @@ func DecodeCamera(data []byte, f *CameraFrame) error {
 		f.Pixels[i] = int16(binary.LittleEndian.Uint16(data[cameraHeaderSize+2*i:]))
 	}
 	return nil
+}
+
+// AppendCameraLine writes "cam seq format width height chunk chunks count pixels... sum" for
+// tools/cameraview, where sum adds every value before it so the viewer can drop damaged lines.
+func AppendCameraLine(b []byte, f *CameraFrame) []byte {
+	b = append(b, "cam"...)
+	var sum int64
+	put := func(v int64) {
+		b = append(b, ' ')
+		b = strconv.AppendInt(b, v, 10)
+		sum += v
+	}
+	put(int64(f.Seq))
+	put(int64(f.Format))
+	put(int64(f.Width))
+	put(int64(f.Height))
+	put(int64(f.Chunk))
+	put(int64(f.Chunks))
+	put(int64(f.Count))
+	for _, p := range f.Pixels[:min(int(f.Count), CameraChunkPixels)] {
+		put(int64(p))
+	}
+	b = append(b, ' ')
+	b = strconv.AppendInt(b, sum, 10)
+	return append(b, '\n')
 }
 
 func checksum(b []byte) byte {

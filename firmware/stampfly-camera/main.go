@@ -16,8 +16,6 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/input"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
-
-	drvamg88xx "tinygo.org/x/drivers/amg88xx"
 )
 
 var (
@@ -37,7 +35,7 @@ func main() {
 			time.Sleep(time.Second)
 		}
 	}
-	camera = findCamera()
+	camera = stampfly.NewCamera()
 	if camera == nil {
 		println("no camera")
 	} else {
@@ -62,22 +60,6 @@ func main() {
 		}
 	}
 	startOnCores(f)
-}
-
-// findCamera looks for an AMG88xx on the Grove port, which has its own I2C bus.
-func findCamera() *amg88xx.Camera {
-	i2c := machine.I2C1
-	if i2c.Configure(machine.I2CConfig{Frequency: 400_000, SDA: machine.GROVE_SDA, SCL: machine.GROVE_SCL}) != nil {
-		return nil
-	}
-	for _, addr := range []uint16{drvamg88xx.AddressHigh, drvamg88xx.AddressLow} {
-		dev := drvamg88xx.New(i2c)
-		dev.Address = addr
-		if dev.Configure(drvamg88xx.Config{}) == nil {
-			return amg88xx.New(&dev)
-		}
-	}
-	return nil
 }
 
 // startOnCores runs the flight loop alone on core 1. Core 0 takes interrupts, the radio, the

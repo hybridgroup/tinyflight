@@ -75,6 +75,7 @@ tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-sensors
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-motortest
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-camera
+tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-cameratest
 ```
 
 ### Firmware
@@ -85,4 +86,5 @@ tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-camera
 | `stampfly-motortest` | Spins each motor in turn when you press the button. Remove the propellers first. |
 | `stampfly` | The flight firmware. For bench tests, send lines over USB serial in the form `rc roll pitch yaw throttle arm mode`. Mode is 0 for acro, 1 for stabilize, 2 for althold and 3 for poshold. Built with `-tags blackbox`, it saves the last 5 flights to flash and prints the latest over USB every 10 s while disarmed. See [docs/joystick.md](docs/joystick.md#reading-the-flight-log). |
 | `stampfly-camera` | The flight firmware plus an AMG88xx thermal camera on the Grove port. It streams frames over ESP-NOW. See [docs/camera.md](docs/camera.md). |
+| `stampfly-cameratest` | Bench tool for the thermal camera. The motors stay off and frames go over USB to `tools/cameraview`. See [docs/camera.md](docs/camera.md#testing-on-the-bench). |
 | `camera-receiver` | For an ESP32-C3 on the computer, not the StampFly. Prints camera frames heard over ESP-NOW for `tools/cameraview`. See [docs/camera.md](docs/camera.md). |

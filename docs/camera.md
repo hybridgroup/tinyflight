@@ -64,6 +64,23 @@ Then open http://localhost:8081. On macOS the port looks like `/dev/cu.usbmodem1
 
 The page shows the image, the coldest, hottest and center temperatures, and the frame rate. Hover over the image to read any spot. Range picks the color scale, and Smooth blends between the 8 by 8 pixels.
 
+## Testing on the bench
+
+To check the camera without flying, flash the bench firmware. It keeps the motors off, does not use the radio, and prints the frames over USB itself, so you need no joystick or receiver.
+
+```
+tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-cameratest
+```
+
+Leave the StampFly plugged in and point the viewer at its port.
+
+```
+cd tools/cameraview
+go run . -port /dev/ttyACM0
+```
+
+Then open http://localhost:8081. A hand in front of the sensor shows as a warm spot. If the sensor is not found, the StampFly prints `no camera` every few seconds.
+
 ## How it works
 
 - The drone reads the sensor every 100 ms on core 0. The flight loop on core 1 is not touched.
