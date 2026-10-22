@@ -66,6 +66,42 @@ func TestArmNeedsRisingEdgeAndLowThrottle(t *testing.T) {
 	}
 }
 
+// press sends one arm button press like the Atom Joystick.
+func (h *harness) press() msg.VehicleStatus {
+	h.in.Arm = true
+	s := h.step(1000, false)
+	h.in.Arm = false
+	h.step(1000, false)
+	return s
+}
+
+func TestArmButtonFollowsArmState(t *testing.T) {
+	h := newHarness()
+	h.in.ArmToggle = true
+	h.in.Throttle = 0.5
+	if h.press().Armed {
+		t.Fatal("armed with throttle up")
+	}
+	h.in.Throttle = 0
+	if !h.press().Armed {
+		t.Fatal("press after a refused arm did not arm")
+	}
+	if !h.step(1000, false).Armed {
+		t.Fatal("disarmed when the button was let go")
+	}
+	h.step(second, true)
+	h.step(4*second, true)
+	if h.c.Status().Armed {
+		t.Fatal("still armed after input loss")
+	}
+	if !h.press().Armed {
+		t.Fatal("press after a failsafe did not arm")
+	}
+	if h.press().Armed {
+		t.Fatal("press did not disarm")
+	}
+}
+
 func arm(h *harness) {
 	h.step(1000, false)
 	h.in.Arm = true
