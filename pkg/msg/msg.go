@@ -131,15 +131,16 @@ func (m FlightMode) String() string {
 
 // ManualInput is what the pilot asks for. Sticks are -1 to 1, throttle is 0 to 1.
 type ManualInput struct {
-	Time     Time
-	Roll     float32 // positive rolls right
-	Pitch    float32 // positive pitches nose up
-	Yaw      float32 // positive turns right
-	Throttle float32
-	Climb    float32 // -1 to 1, climb request used in AltHold and PosHold
-	Arm      bool
-	Mode     FlightMode
-	Valid    bool
+	Time      Time
+	Roll      float32 // positive rolls right
+	Pitch     float32 // positive pitches nose up
+	Yaw       float32 // positive turns right
+	Throttle  float32
+	Climb     float32 // -1 to 1, climb request used in AltHold and PosHold
+	Arm       bool
+	ArmToggle bool // Arm is a button that toggles arming on each press, not a switch
+	Mode      FlightMode
+	Valid     bool
 }
 
 // Failsafe is the reason for the last automatic landing or disarm.

@@ -27,11 +27,9 @@ const (
 	stickDeadband   = 0.2
 )
 
-// AtomJoystick decodes Atom Joystick packets. The arm button toggles arming each time it is released.
+// AtomJoystick decodes Atom Joystick packets.
 type AtomJoystick struct {
-	mac       [3]byte
-	armed     bool
-	buttonWas bool
+	mac [3]byte
 }
 
 // NewAtomJoystick takes the vehicle's own MAC address, whose last 3 bytes start every packet.
@@ -56,19 +54,14 @@ func (a *AtomJoystick) Decode(data []byte, now msg.Time, out *msg.ManualInput) e
 	roll := f32(data[11:])
 	pitch := f32(data[15:])
 
-	button := data[19] != 0
-	if a.buttonWas && !button {
-		a.armed = !a.armed
-	}
-	a.buttonWas = button
-
 	out.Time = now
 	out.Roll = fmath.Clamp(roll, -1, 1)
 	out.Pitch = fmath.Clamp(pitch, -1, 1)
 	out.Yaw = fmath.Clamp(yaw, -1, 1)
 	out.Climb = fmath.Deadband(fmath.Clamp(throttle, -1, 1), stickDeadband)
 	out.Throttle = fmath.Max(out.Climb, 0)
-	out.Arm = a.armed
+	out.Arm = data[19] != 0
+	out.ArmToggle = true
 	rate := data[21] == atomRateControl
 	switch {
 	case data[22] == atomAutoAlt && rate:

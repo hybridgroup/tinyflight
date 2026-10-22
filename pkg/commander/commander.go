@@ -56,21 +56,25 @@ func (c *Commander) Update(s State) msg.VehicleStatus {
 	st := &c.status
 	st.Time = s.Now
 
-	armRequest := in.Valid && in.Arm && !c.prevArm
+	pressed := in.Valid && in.Arm && !c.prevArm
 	c.prevArm = in.Valid && in.Arm
 
 	if !st.Armed {
 		// The last failsafe stays visible until the next arm.
 		st.Mode = in.Mode
 		st.Landing = false
-		if armRequest && c.canArm(s) {
+		if pressed && c.canArm(s) {
 			st.Armed = true
 			st.Failsafe = msg.FailsafeNone
 		}
 		return *st
 	}
 
-	if !in.Arm && in.Valid && c.inputFresh(s) {
+	disarm := !in.Arm
+	if in.ArmToggle {
+		disarm = pressed
+	}
+	if disarm && in.Valid && c.inputFresh(s) {
 		c.disarm()
 		return *st
 	}

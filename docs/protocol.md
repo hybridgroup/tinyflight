@@ -62,7 +62,7 @@ This is done by `pkg/input/atom.go`.
 | Throttle above 0.2 | Throttle, rescaled from 0 at 0.2 to 1 at full stick. Below 0.2 the throttle is 0, the same deadband as the stock firmware. |
 | Throttle, whole range | Also gives the climb rate request for AltHold and PosHold, with a 0.2 deadband around center |
 
-**Arming:** each time the arm button is released, arming toggles. The commander still runs its own arming checks.
+**Arming:** each press of the arm button arms the drone if it is disarmed and disarms it if it is armed. The commander still runs its own arming checks.
 
 **Modes:** control mode 1 gives Acro, otherwise Stabilize. Altitude mode 4 gives AltHold with control mode 0, and PosHold with control mode 1. On the joystick the Mode button toggles altitude mode and the Option button toggles control mode, from `check_alt_mode_change` and `check_control_mode_change` in [StampFlyController](https://github.com/m5stack/Atom-JoyStick/blob/main/examples/StampFlyController/src/main.cpp).
 

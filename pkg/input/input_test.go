@@ -36,7 +36,7 @@ func TestAtomDecode(t *testing.T) {
 		t.Errorf("climb %v throttle %v, want both 0.5 after the deadband", in.Climb, in.Throttle)
 	}
 	in.Climb, in.Throttle = 0, 0
-	want := msg.ManualInput{Time: 7, Roll: -0.25, Pitch: 0.75, Yaw: 0.5, Mode: msg.ModeStabilize, Valid: true}
+	want := msg.ManualInput{Time: 7, Roll: -0.25, Pitch: 0.75, Yaw: 0.5, ArmToggle: true, Mode: msg.ModeStabilize, Valid: true}
 	if in != want {
 		t.Errorf("got %+v", in)
 	}
@@ -54,16 +54,13 @@ func TestAtomDecode(t *testing.T) {
 	}
 }
 
-func TestAtomArmToggle(t *testing.T) {
+func TestAtomArmButton(t *testing.T) {
 	a := NewAtomJoystick(mac)
 	var in msg.ManualInput
-	for i, step := range []struct {
-		button byte
-		arm    bool
-	}{{0, false}, {1, false}, {1, false}, {0, true}, {1, true}, {0, false}} {
-		a.Decode(packet(0, 0, 0, 0, step.button, 0, 5), 0, &in)
-		if in.Arm != step.arm {
-			t.Errorf("step %d arm %v", i, in.Arm)
+	for _, button := range []byte{0, 1, 0} {
+		a.Decode(packet(0, 0, 0, 0, button, 0, 5), 0, &in)
+		if in.Arm != (button != 0) || !in.ArmToggle {
+			t.Errorf("button %d gave arm %v toggle %v", button, in.Arm, in.ArmToggle)
 		}
 	}
 }
