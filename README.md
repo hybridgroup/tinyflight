@@ -2,6 +2,8 @@
 
 # Tinyflight
 
+[![CI](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml) [![coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/hybridgroup/tinyflight/badges/coverage.json)](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml)
+
 Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1).
 
 ![m5stamp fly](./images/m5stampfly.gif)
