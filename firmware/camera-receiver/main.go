@@ -2,6 +2,7 @@
 
 // Camera receiver for the ground. It listens for camera packets from a StampFly over ESP-NOW and
 // prints each one to USB serial for tools/cameraview. It never sends, so it cannot disturb the joystick.
+// An SSD1306 display on the default I2C pins, if there is one, shows the image too.
 //
 //	tinygo flash -target xiao-esp32c3 ./firmware/camera-receiver
 package main
@@ -27,10 +28,17 @@ func main() {
 		}
 	}
 	println("camera receiver ready on channel", espnowinput.Channel)
+	disp := newDisplay()
+	if disp != nil {
+		println("display found")
+	}
 	var line []byte
 	for f := range frames {
 		line = input.AppendCameraLine(line[:0], &f)
 		os.Stdout.Write(line)
+		if disp != nil {
+			disp.show(&f)
+		}
 	}
 }
 
