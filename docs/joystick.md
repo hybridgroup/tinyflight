@@ -34,7 +34,7 @@ These are for stick mode 2, the stock setting.
 The throttle stick centres at 0, which is not like a normal RC transmitter.
 
 - **Stabilize and Acro.** Centre or below is no thrust. Above the deadband thrust rises smoothly, and the drone hovers with the left stick about halfway between centre and full up. Letting go drops the motors to idle.
-- **AltHold and PosHold.** After arming the motors stay at idle until you push the left stick up past 20%. From then on, centre holds the height, up climbs and down descends, up to 0.5 m/s. The StampFly will not climb past 1.2 m above where it took off.
+- **AltHold and PosHold.** After arming the motors stay at idle until you push the left stick up past 20%. From then on, centre holds the height, up climbs and down descends, up to 0.5 m/s. The StampFly will not climb past 10 m above where it took off. See [Height limit](../README.md#height-limit) to change it.
 
 There is a 20% deadband around centre, the same as the stock drone firmware.
 
