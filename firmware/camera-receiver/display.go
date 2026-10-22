@@ -33,7 +33,7 @@ func newDisplay() *display {
 		if i2c.Tx(addr, []byte{0x00, 0xAE}, nil) != nil {
 			continue
 		}
-		d := &display{dev: *ssd1306.NewI2C(i2c)}
+		d := &display{dev: *ssd1306.NewI2C(i2c), image: newThermalImage()}
 		d.dev.Configure(ssd1306.Config{Width: 128, Height: 64, Address: addr, VccState: ssd1306.SWITCHCAPVCC})
 		d.message("waiting")
 		return d
