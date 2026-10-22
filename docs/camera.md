@@ -9,6 +9,8 @@ AMG8833 --Grove I2C--> StampFly --ESP-NOW--> ESP32-C3 --USB serial--> cameraview
                      Atom Joystick
 ```
 
+<img alt="StampFly with an AMG8833 camera" src="../images/stampfly-camera.jpg" width="400">
+
 The AMG8833 gives 8 by 8 pixels from 0 to 80 °C at 10 frames per second. The packet and viewer are not tied to it, so a better camera can use them later. See [protocol.md](protocol.md#camera-packet-drone-to-ground-receiver).
 
 ## What you need
@@ -33,9 +35,19 @@ The Grove port gives 5 V, with 4.7 kΩ pull-ups on SDA and SCL to 3.3 V, from J3
 
 Before connecting SDA and SCL to the StampFly, power it up and check that regulator OUT and the Adafruit SDA and SCL pins all read about 3.3 V.
 
-Point the sensor forward or down and fix it so it cannot touch a propeller.
+### Direct cable
+
+A Grove to Qwiic or STEMMA QT cable plugs straight into the Adafruit board with no regulator. It is simpler and lighter, but the cable passes the Grove 5 V to Vin, so SDA and SCL may sit over the 3.6 V limit. It works, but it can wear out the ESP32-S3 I2C pins over time. Check SDA and SCL to GND with a meter while it is powered, and use the regulator wiring if they read over 3.6 V.
 
 At power on the firmware looks for the sensor at I2C address 0x69, then 0x68. If it finds one, it prints `camera found` over USB. If not, it prints `no camera` and flies without it.
+
+## Mounting
+
+- Point the sensor forward or down and fix it so it cannot touch a propeller.
+- Keep it light. The StampFly weighs about 37 g, so every gram cuts the spare thrust. A 9 g add-on needed about 0.70 thrust to hover on a sagging battery and could barely climb. The 5 g setup in the photo flies well.
+- Keep the weight over the middle. With the camera forward of center the nose dropped about 9° at liftoff and the drone shot forward. Balance it on a fingertip under the middle to check.
+- Fly on a full battery and land early, since a heavier drone runs out of thrust sooner as the voltage sags.
+- Route the wires away from the ESP32-S3 antenna. With them close, each radio send put a stripe of cold pixels in most frames, and moving them cut that from 69% of frames to about 5%.
 
 ## Flashing
 
