@@ -86,6 +86,12 @@ Any SSD1306 at I2C address 0x3C or 0x3D on the board's default I2C pins works, w
 
 At power on the receiver prints `display found` over USB if it finds one, and the display shows `waiting` until the first frame. Then the left half shows the image with hot areas lit, and the right half shows the hottest, center and coldest temperatures in °C. The scale stays at least 8 °C wide, like Auto in the viewer. The receiver still prints every frame over USB, so the viewer works at the same time.
 
+To flip the display image to match how the camera is mounted, set either flip when you flash. Set both to turn it upside down.
+
+```
+tinygo flash -target xiao-esp32c3 -ldflags="-X main.FlipVertical=true -X main.FlipHorizontal=true" ./firmware/camera-receiver
+```
+
 ## Testing on the bench
 
 To check the camera without flying, flash the bench firmware. It keeps the motors off, does not use the radio, and prints the frames over USB itself, so you need no joystick or receiver.

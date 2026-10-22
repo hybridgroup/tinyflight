@@ -1,6 +1,14 @@
 package main
 
-import "github.com/hybridgroup/tinyflight/pkg/input"
+import (
+	"strconv"
+
+	"github.com/hybridgroup/tinyflight/pkg/input"
+)
+
+// FlipVertical and FlipHorizontal flip the display image to match how the camera is mounted.
+// Set them with -ldflags="-X main.FlipVertical=true -X main.FlipHorizontal=true".
+var FlipVertical, FlipHorizontal string
 
 // imageSize is the side of the square image on the display, in display pixels.
 const imageSize = 64
@@ -18,7 +26,14 @@ var bayer = [4][4]uint8{
 
 // thermalImage holds the newest thermal frame scaled to imageSize by imageSize.
 type thermalImage struct {
-	cells [imageSize][imageSize]int16
+	cells        [imageSize][imageSize]int16
+	flipV, flipH bool
+}
+
+func newThermalImage() thermalImage {
+	v, _ := strconv.ParseBool(FlipVertical)
+	h, _ := strconv.ParseBool(FlipHorizontal)
+	return thermalImage{flipV: v, flipH: h}
 }
 
 // add copies a frame chunk into the image and reports whether it was the last chunk.
@@ -32,6 +47,12 @@ func (m *thermalImage) add(f *input.CameraFrame) bool {
 		sx, sy := (start+i)%w, (start+i)/w
 		if sy >= h {
 			break
+		}
+		if m.flipH {
+			sx = w - 1 - sx
+		}
+		if m.flipV {
+			sy = h - 1 - sy
 		}
 		for y := sy * imageSize / h; y < (sy+1)*imageSize/h; y++ {
 			for x := sx * imageSize / w; x < (sx+1)*imageSize/w; x++ {

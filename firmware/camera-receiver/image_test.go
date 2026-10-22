@@ -26,6 +26,23 @@ func TestAddScalesFrame(t *testing.T) {
 	}
 }
 
+func TestFlip(t *testing.T) {
+	FlipVertical, FlipHorizontal = "true", "1"
+	defer func() { FlipVertical, FlipHorizontal = "", "" }()
+	f := input.CameraFrame{Format: input.CameraThermal, Width: 8, Height: 8, Chunks: 1, Count: 64}
+	for i := range 64 {
+		f.Pixels[i] = int16(i)
+	}
+	m := newThermalImage()
+	m.add(&f)
+	if got := m.cells[0][0]; got != 63 {
+		t.Errorf("top left cell %d, want 63", got)
+	}
+	if got := m.cells[63][48]; got != 1 {
+		t.Errorf("bottom right block %d, want 1", got)
+	}
+}
+
 func TestAddChunks(t *testing.T) {
 	f := input.CameraFrame{Format: input.CameraThermal, Width: 16, Height: 16, Chunks: 3, Count: input.CameraChunkPixels}
 	var m thermalImage
