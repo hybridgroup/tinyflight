@@ -8,6 +8,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v5
 
@@ -22,7 +24,7 @@ jobs:
         run: go vet ./...
 
       - name: Test
-        run: go test ./...
+        run: go test -coverprofile=coverage.out ./...
 
       - name: Test tools/estimate
         working-directory: tools/estimate
@@ -30,7 +32,53 @@ jobs:
 
       - name: Test tools/tinyflightsim
         working-directory: tools/tinyflightsim
-        run: go vet ./... && go test ./...
+        run: go vet ./... && go test -coverprofile=coverage.out ./...
+
+      - name: Coverage report
+        run: |
+          {
+            echo "## Coverage"
+            echo
+            echo "| Module | Total |"
+            echo "| --- | --- |"
+            for dir in . tools/tinyflightsim; do
+              total=$(cd "$dir" && go tool cover -func=coverage.out | tail -1 | awk '{print $NF}')
+              echo "| $dir | $total |"
+            done
+            echo
+            echo '<details><summary>Per function</summary>'
+            echo
+            echo '```'
+            go tool cover -func=coverage.out
+            echo '```'
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
+          go tool cover -html=coverage.out -o coverage.html
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage.out
+            coverage.html
+            tools/tinyflightsim/coverage.out
+
+      - name: Publish coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          pct=$(go tool cover -func=coverage.out | tail -1 | awk '{print $NF}' | tr -d '%')
+          color=red
+          if awk "BEGIN{exit !($pct >= 80)}"; then color=brightgreen
+          elif awk "BEGIN{exit !($pct >= 60)}"; then color=yellow
+          fi
+          mkdir badge && cd badge
+          echo "{\"schemaVersion\":1,\"label\":\"coverage\",\"message\":\"$pct%\",\"color\":\"$color\"}" > coverage.json
+          git init -q -b badges
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add coverage.json
+          git commit -q -m "Update coverage badge"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" badges
 
   cameraview:
     runs-on: ubuntu-latest
@@ -45,7 +93,12 @@ jobs:
           go-version-file: tools/cameraview/go.mod
 
       - name: Test tools/cameraview
-        run: go vet ./... && go test ./...
+        run: go vet ./... && go test -coverprofile=coverage.out ./...
+
+      - name: Coverage report
+        run: |
+          total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $NF}')
+          echo "## Coverage tools/cameraview: $total" >> "$GITHUB_STEP_SUMMARY"
 
   sim-firmware:
     runs-on: ubuntu-latest
