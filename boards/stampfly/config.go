@@ -7,9 +7,11 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/params"
 )
 
-// MaxHeight is the height limit in m for AltHold and PosHold, 0 for no limit.
+const defaultMaxHeight = 10
+
+// MaxHeight is the height limit in m for AltHold and PosHold, 0 for no limit, empty for the default.
 // Set it with -ldflags="-X github.com/hybridgroup/tinyflight/boards/stampfly.MaxHeight=5".
-var MaxHeight = "10"
+var MaxHeight string
 
 // Config returns the flight settings for the StampFly.
 func Config() params.Config {
@@ -26,10 +28,9 @@ func Config() params.Config {
 	// Hover duty from get_trim_duty in flight_control.cpp of https://github.com/m5stack/M5StampFly
 	cfg.Hover = params.Hover{Slope: -0.2448, Offset: 1.5892}
 	cfg.Vertical.HoverThrust = 0.35
+	cfg.Manual.MaxHeight = defaultMaxHeight
 	if h, err := strconv.ParseFloat(MaxHeight, 32); err == nil {
 		cfg.Manual.MaxHeight = float32(h)
-	} else {
-		cfg.Manual.MaxHeight = 10
 	}
 	// A fit of flight 10 gave 12.7 m/s² per unit thrust near hover, 0.45 times the sim the gains were tuned in.
 	// See https://github.com/hybridgroup/tinyflight/pull/1
