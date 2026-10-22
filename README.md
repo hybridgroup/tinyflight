@@ -85,6 +85,14 @@ tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-camera
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-cameratest
 ```
 
+### Height limit
+
+In AltHold and PosHold the StampFly will not climb past 10 m above where it took off. Set a different limit in meters with `-ldflags`, or 0 for no limit:
+
+```
+tinygo flash -scheduler=cores -target m5stamp-fly -ldflags="-X github.com/hybridgroup/tinyflight/boards/stampfly.MaxHeight=2" ./firmware/stampfly
+```
+
 ### Firmware
 
 | Firmware | What it does |
