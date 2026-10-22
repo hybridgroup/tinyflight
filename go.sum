@@ -16,3 +16,5 @@ tinygo.org/x/drivers v0.36.1-0.20261021163110-f0a4d10928b4 h1:4U9u1eGcQTS4aSus6S
 tinygo.org/x/drivers v0.36.1-0.20261021163110-f0a4d10928b4/go.mod h1:DQgKyHkB4G6IEOKVTAjApbKnWGwESN91EVJO+nMOE9Y=
 tinygo.org/x/espradio v0.4.1-0.20261020142753-4e00dfa7867d h1:kUIi26Oe/c55b5qBvjxZc/805xxvXLSdgS3If0C8+Bg=
 tinygo.org/x/espradio v0.4.1-0.20261020142753-4e00dfa7867d/go.mod h1:PI7GtwabAzn6R+JN6eIyHjYZpGf1/ABkh4OzpDFQJ3E=
+tinygo.org/x/tinyfont v0.7.0 h1:Ju901eGRThlHLoti9K7myMYyv4phd3I0DrJwc14NTTU=
+tinygo.org/x/tinyfont v0.7.0/go.mod h1:onflMSkpWl7r7j4MIqhPEVV39pn7yL4N3MOePl3G+G8=

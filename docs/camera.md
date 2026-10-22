@@ -78,6 +78,14 @@ Then open http://localhost:8081. On macOS the port looks like `/dev/cu.usbmodem1
 
 The page shows the image, the coldest, hottest and center temperatures, and the frame rate. Hover over the image to read any spot. Range picks the color scale, and Smooth blends between the 8 by 8 pixels. Auto keeps the scale at least 8 °C wide, so an empty scene stays calm instead of showing the sensor noise. Flip vertical and Flip horizontal match how the camera is mounted, and the browser remembers them. Check both to turn the image upside down.
 
+## Display on the receiver
+
+The receiver can also show the image on a 128 by 64 SSD1306 OLED, so you can watch it away from the computer. The display is optional. One that works is the Seeed Studio XIAO expansion board with the XIAO ESP32-C3 plugged into it.
+
+Any SSD1306 at I2C address 0x3C or 0x3D on the board's default I2C pins works, which are D4 SDA and D5 SCL on the XIAO. The M5Stack M5StampS3 uses GPIO13 SDA and GPIO14 SCL with `-target m5stamp-s3a`. The `m5stamp-c3` target has no I2C in TinyGo, so it runs without the display.
+
+At power on the receiver prints `display found` over USB if it finds one, and the display shows `waiting` until the first frame. Then the left half shows the image with hot areas lit, and the right half shows the hottest, center and coldest temperatures in °C. The scale stays at least 8 °C wide, like Auto in the viewer. The receiver still prints every frame over USB, so the viewer works at the same time.
+
 ## Testing on the bench
 
 To check the camera without flying, flash the bench firmware. It keeps the motors off, does not use the radio, and prints the frames over USB itself, so you need no joystick or receiver.
