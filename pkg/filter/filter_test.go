@@ -94,3 +94,33 @@ func TestLowCutoff(t *testing.T) {
 		t.Errorf("20 Hz through a 1 Hz low-pass gave %v", a)
 	}
 }
+
+func TestVec3Filters(t *testing.T) {
+	lp := NewLowPass1Vec3(10, 1000)
+	lp.Apply(fmath.Vec3{X: 1, Y: 2, Z: 3})
+	if v := lp.Apply(fmath.Vec3{}); v.X <= 0 || v.X >= 1 || v.Z <= v.Y {
+		t.Errorf("low-pass step %+v", v)
+	}
+	bq := NewBiquadVec3(NewLowPass2(10, 1000))
+	bq.Apply(fmath.Vec3{X: 1, Y: 2, Z: 3})
+	if v := bq.Apply(fmath.Vec3{}); v.X <= 0 || v.X >= 1 || v.Z <= v.Y {
+		t.Errorf("biquad step %+v", v)
+	}
+}
+
+func TestLowPass1Reset(t *testing.T) {
+	f := NewLowPass1(10, 1000)
+	f.Apply(5)
+	f.Reset()
+	if v := f.Apply(-2); v != -2 || f.Value() != -2 {
+		t.Errorf("after reset %v, want -2", v)
+	}
+}
+
+func TestNotchDisabled(t *testing.T) {
+	for _, f := range []Biquad{NewNotch(0, 1, 1000), NewNotch(100, 0, 1000), NewNotch(600, 1, 1000)} {
+		if f.Apply(3) != 3 {
+			t.Error("disabled notch changed value")
+		}
+	}
+}

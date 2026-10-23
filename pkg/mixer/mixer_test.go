@@ -92,3 +92,22 @@ func TestThrustInvertsMix(t *testing.T) {
 		}
 	}
 }
+
+func TestCountAndStop(t *testing.T) {
+	m := New(Config{Geometry: QuadX})
+	if m.Count() != 4 {
+		t.Errorf("count %d", m.Count())
+	}
+	out := msg.MotorOutputs{Value: [msg.MaxMotors]float32{1, 1, 1, 1, 1}}
+	m.Stop(&out)
+	if out.Count != 4 || out.Value != [msg.MaxMotors]float32{} {
+		t.Errorf("stop %+v", out)
+	}
+}
+
+func TestAirModeRaisesThrust(t *testing.T) {
+	out := mix(Config{Geometry: QuadX, AirMode: true}, 0, fmath.Vec3{X: 0.4})
+	if out.Value[fl] <= 0 || out.Value[fr] != 0 {
+		t.Errorf("air mode at zero thrust %+v", out.Value[:4])
+	}
+}

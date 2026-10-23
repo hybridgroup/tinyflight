@@ -577,3 +577,41 @@ func TestTrimCarriesOver(t *testing.T) {
 		t.Errorf("trim did not carry over")
 	}
 }
+
+type led struct{ r, g, b uint8 }
+
+func (l *led) SetColor(r, g, b uint8) { *l = led{r, g, b} }
+
+func TestLEDAndReadings(t *testing.T) {
+	w := newWorld(t)
+	l := &led{}
+	w.f.hw.LED = l
+	w.run(0.1, nil)
+	if *l != (led{0, 0, 32}) {
+		t.Errorf("led %+v while calibrating, want blue", *l)
+	}
+	w.arm(msg.ModeAltHold)
+	if *l != (led{32, 0, 0}) {
+		t.Errorf("led %+v while armed, want red", *l)
+	}
+	if w.f.Input().Mode != msg.ModeAltHold || w.f.Battery().Voltage == 0 || w.f.Attitude().Q.W == 0 {
+		t.Errorf("input %+v battery %+v", w.f.Input(), w.f.Battery())
+	}
+	if w.f.IMU().Accel.Z > -9 || !w.f.Range().Valid {
+		t.Errorf("imu %+v range %+v", w.f.IMU(), w.f.Range())
+	}
+	if w.f.Flow().Valid || w.f.Mag().Field != (fmath.Vec3{}) {
+		t.Errorf("flow %+v mag %+v on the ground", w.f.Flow(), w.f.Mag())
+	}
+	if fmath.Abs(w.f.HeightSetpoint()) > 0.1 || w.f.Setpoint().Thrust < 0 || w.f.Stats().IMUErrors != 0 {
+		t.Errorf("height setpoint %v stats %+v", w.f.HeightSetpoint(), w.f.Stats())
+	}
+	if _, used, _, _, _ := w.f.FlowDebug(); used {
+		t.Error("flow used while on the ground")
+	}
+	w.pilot.Silent = true
+	w.run(1, nil)
+	if *l != (led{32, 32, 0}) {
+		t.Errorf("led %+v after input loss, want yellow", *l)
+	}
+}

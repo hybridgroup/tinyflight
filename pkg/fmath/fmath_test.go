@@ -95,3 +95,62 @@ func TestAsinAndSqrt(t *testing.T) {
 		}
 	}
 }
+
+func TestVec3(t *testing.T) {
+	a, b := Vec3{1, 2, 3}, Vec3{4, 5, 6}
+	if a.Add(b) != (Vec3{5, 7, 9}) || b.Sub(a) != (Vec3{3, 3, 3}) || a.Scale(2) != (Vec3{2, 4, 6}) {
+		t.Error("add, sub or scale")
+	}
+	if a.Mul(b) != (Vec3{4, 10, 18}) || a.Dot(b) != 32 || a.Neg() != (Vec3{-1, -2, -3}) {
+		t.Error("mul, dot or neg")
+	}
+	if a.Cross(b) != (Vec3{-3, 6, -3}) {
+		t.Errorf("cross %+v", a.Cross(b))
+	}
+	if a.Index(0) != 1 || a.Index(2) != 3 || Vec3FromArray(a.Array()) != a {
+		t.Error("index or array")
+	}
+	if n := (Vec3{3, 4, 0}).Normalized(); Abs(n.Norm()-1) > 1e-6 || Abs(n.X-0.6) > 1e-6 {
+		t.Errorf("normalized %+v", n)
+	}
+	if (Vec3{}).Normalized() != (Vec3{}) {
+		t.Error("zero normalized")
+	}
+	if c := (Vec3{5, -5, 0.5}).Clamp(Vec3{1, 2, 3}); c != (Vec3{1, -2, 0.5}) {
+		t.Errorf("clamp %+v", c)
+	}
+}
+
+func TestScalars(t *testing.T) {
+	if Abs(Sin(Pi/2)-1) > 0.003 || Abs(Cos(0)-1) > 0.003 {
+		t.Error("sin or cos")
+	}
+	if Clamp(-2, -1, 1) != -1 || Clamp(2, -1, 1) != 1 || Clamp(0.5, -1, 1) != 0.5 {
+		t.Error("clamp")
+	}
+	if Min(1, 2) != 1 || Min(2, 1) != 1 || Max(1, 2) != 2 || Max(2, 1) != 2 {
+		t.Error("min or max")
+	}
+	if Abs(WrapPi(2*Pi+1)-1) > 1e-5 || Abs(WrapPi(-2*Pi-1)+1) > 1e-5 {
+		t.Errorf("wrap %v %v", WrapPi(2*Pi+1), WrapPi(-2*Pi-1))
+	}
+	if Abs(Radians(180)-Pi) > 1e-6 || Abs(Degrees(Pi)-180) > 1e-4 {
+		t.Error("radians or degrees")
+	}
+	if Identity3().MulVec(Vec3{1, 2, 3}) != (Vec3{1, 2, 3}) {
+		t.Error("identity")
+	}
+}
+
+func TestQuatConjNormalized(t *testing.T) {
+	q := QuatFromEuler(0.3, -0.2, 1)
+	if p := q.Mul(q.Conj()); Abs(p.W-1) > 1e-5 {
+		t.Errorf("q times conj %+v", p)
+	}
+	if (Quat{}).Normalized() != IdentityQuat() {
+		t.Error("zero quat normalized")
+	}
+	if n := (Quat{W: 2}).Normalized(); n != IdentityQuat() {
+		t.Errorf("normalized %+v", n)
+	}
+}

@@ -51,3 +51,34 @@ func TestNoDerivativeKick(t *testing.T) {
 		t.Errorf("setpoint step gave D output %v", out)
 	}
 }
+
+func TestResetAndSetIntegral(t *testing.T) {
+	c := New(Config{P: 1, I: 1, D: 1, IntegralLimit: 0.5, SampleHz: 400})
+	c.Update(1, 0, 0.1)
+	c.SetIntegral(2)
+	if c.Integral() != 0.5 {
+		t.Errorf("integral %v, want the 0.5 limit", c.Integral())
+	}
+	c.Reset()
+	if c.Integral() != 0 {
+		t.Errorf("integral %v after reset", c.Integral())
+	}
+	// No D kick on the first update after a reset.
+	if out := c.Update(0, 10, 0.1); out != -10 {
+		t.Errorf("output %v, want -10", out)
+	}
+}
+
+func TestVec3(t *testing.T) {
+	cfg := Config{P: 2, SampleHz: 400}
+	v := NewVec3(cfg, cfg, Config{P: 1, SampleHz: 400})
+	out := v.Update(fmath.Vec3{X: 1, Y: -1, Z: 1}, fmath.Vec3{}, 0.0025)
+	if out != (fmath.Vec3{X: 2, Y: -2, Z: 1}) {
+		t.Errorf("output %+v", out)
+	}
+	v[0].SetIntegral(1)
+	v.Reset()
+	if v[0].Integral() != 0 {
+		t.Error("reset kept the integral")
+	}
+}
