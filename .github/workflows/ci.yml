@@ -111,3 +111,35 @@ jobs:
 
       - name: Build the firmware for tinyflightsim
         run: tinygo build -target=wasip1 -tags=tinyflightsim -no-debug -o /tmp/firmware.wasm ./firmware/stampfly
+
+  firmware:
+    runs-on: ubuntu-latest
+    container: tinygo/tinygo-dev:latest
+    env:
+      GOFLAGS: -buildvcs=false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: stampfly
+            flags: -scheduler=cores -target=m5stamp-fly
+          - name: stampfly-sensors
+            flags: -scheduler=cores -target=m5stamp-fly
+          - name: stampfly-motortest
+            flags: -scheduler=cores -target=m5stamp-fly
+          - name: stampfly-camera
+            flags: -scheduler=cores -target=m5stamp-fly
+          - name: stampfly-cameratest
+            flags: -scheduler=cores -target=m5stamp-fly
+          - name: camera-receiver
+            flags: -target=xiao-esp32c3
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build ${{ matrix.name }}
+        run: tinygo build ${{ matrix.flags }} -o ${{ matrix.name }}.bin ./firmware/${{ matrix.name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: ${{ matrix.name }}.bin
