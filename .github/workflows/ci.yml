@@ -139,7 +139,7 @@ jobs:
       - name: Build ${{ matrix.name }}
         run: tinygo build ${{ matrix.flags }} -o ${{ matrix.name }}.bin ./firmware/${{ matrix.name }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.name }}
           path: ${{ matrix.name }}.bin
+          archive: false
