@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/hybridgroup/tinyflight"
 	"github.com/hybridgroup/tinyflight/boards/stampfly"
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
@@ -18,6 +19,7 @@ import (
 
 func main() {
 	time.Sleep(2 * time.Second)
+	println("Tinyflight", tinyflight.Version())
 	hw, ok := setup()
 	if !ok {
 		println("no IMU, not flying")
