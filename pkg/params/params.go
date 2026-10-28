@@ -127,7 +127,7 @@ func Default() Config {
 		Horizontal: position.HorizontalConfig{
 			XYP:      1,
 			Vel:      pid.Config{P: 2, I: 0.5, IntegralLimit: 1, OutputLimit: 3, SampleHz: hz},
-			MaxSpeed: 0.5,
+			MaxSpeed: 0.6,
 			MaxTilt:  0.3,
 		},
 		Mixer: mixer.Config{Geometry: mixer.QuadX, ThrustModel: 1, Idle: 0.05},
