@@ -71,13 +71,7 @@ Then open http://localhost:8080. The server builds `firmware/stampfly` with Tiny
 
 ## Building for the StampFly
 
-The build needs a TinyGo built with this PR merged into `dev`:
-
-| PR | Change |
-|---|---|
-| [#5934](https://github.com/tinygo-org/tinygo/pull/5934) | machine/esp32s3: add flash BlockDevice support |
-
-Build with the cores scheduler, so the flight loop gets a core to itself:
+TinyGo needs to use the cores scheduler to use both cores on the ESP32S3. This ensures that the flight loop gets a core to itself:
 
 ```
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-sensors
