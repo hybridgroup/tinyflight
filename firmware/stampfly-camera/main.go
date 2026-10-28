@@ -53,7 +53,7 @@ func main() {
 
 	f := flight.New(b.Hardware, stampfly.Config())
 	if joystick != nil {
-		go joystick.RunTelemetry(100*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) })
+		go joystick.RunTelemetry(50*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) })
 		if camera != nil {
 			// The driver Configure sets the AMG88xx to 10 frames per second.
 			go joystick.RunCamera(100*time.Millisecond, func(fr *input.CameraFrame) bool { return camera.ReadFrame(fr) == nil })
