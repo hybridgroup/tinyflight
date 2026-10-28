@@ -131,6 +131,18 @@ image.addEventListener('mouseleave', () => {
   mouse = null;
   showCursor();
 });
+// Fit the largest square in the view and render at that size so smoothing stays sharp.
+new ResizeObserver(() => {
+  const v = $('view');
+  const size = Math.max(64, Math.floor(Math.min(v.clientWidth, v.clientHeight)));
+  image.style.width = image.style.height = `${size}px`;
+  const px = Math.min(1024, size);
+  if (image.width !== px) {
+    image.width = image.height = px;
+    draw();
+  }
+}).observe($('view'));
+
 rangeSel.addEventListener('change', () => {
   auto = null;
   draw();

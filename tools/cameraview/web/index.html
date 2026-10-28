@@ -25,10 +25,13 @@
   </div>
 </header>
 <main>
-  <div class="view">
-    <canvas id="image" width="320" height="320"></canvas>
-    <div id="cursor" class="cursor" hidden></div>
+  <div id="view" class="view">
+    <div class="frame">
+      <canvas id="image" width="320" height="320"></canvas>
+      <div id="cursor" class="cursor" hidden></div>
+    </div>
   </div>
+  <div class="side">
   <div class="scale">
     <span id="scale-max">-</span>
     <canvas id="bar" width="16" height="256"></canvas>
@@ -41,6 +44,7 @@
     <dt>Frame</dt><dd id="hud-seq">-</dd>
     <dt>Rate</dt><dd id="hud-fps">-</dd>
   </dl>
+  </div>
 </main>
 <script src="app.js"></script>
 </body>
