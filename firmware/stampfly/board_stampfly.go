@@ -35,7 +35,7 @@ func setup() (flight.Hardware, bool) {
 
 func startTelemetry(f *flight.Flight) {
 	if joystick != nil {
-		go joystick.RunTelemetry(100*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) })
+		go joystick.RunTelemetry(50*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) })
 	}
 }
 

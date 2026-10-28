@@ -83,7 +83,7 @@ flowchart LR
 |---|---|---|
 | `read_input` | page to firmware | The newest 25 byte joystick packet |
 | `publish_state` | firmware to page | True and estimated position, attitude, motors, LED and status, about 66 times per second |
-| `telemetry` | firmware to page | The 120 byte telemetry packet for the joystick screen, 10 times per second |
+| `telemetry` | firmware to page | The 120 byte telemetry packet for the joystick screen, 20 times per second |
 
 These go through a SharedArrayBuffer, because the firmware blocks the worker while it runs. The page needs cross origin isolation for that, so open it from the tinyflightsim server and not as a file.
 

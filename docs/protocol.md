@@ -68,7 +68,7 @@ This is done by `pkg/input/atom.go`.
 
 ## Telemetry packet, drone to joystick, 120 bytes
 
-Tinyflight broadcasts it 10 times per second once a joystick has paired. The joystick shows the drone attitude, battery and altitude. In altitude hold mode it also needs the flight mode, or its arm button does nothing.
+Tinyflight broadcasts it 20 times per second once a joystick has paired. The joystick shows the drone attitude, battery and altitude. In altitude hold mode it also needs the flight mode, or its arm button does nothing.
 
 **Header:** bytes 0 and 1 are both 88.
 

@@ -33,7 +33,7 @@ func Board() *World { return board }
 const (
 	paceSteps      = 4  // 10 ms at 400 Hz
 	stateSteps     = 6  // about 66 per second
-	telemetrySteps = 40 // 10 per second, like the radio
+	telemetrySteps = 20 // 20 per second, like the radio
 	maxBehind      = 100 * time.Millisecond
 )
 
