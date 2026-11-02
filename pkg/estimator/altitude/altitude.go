@@ -94,14 +94,18 @@ func (f *Filter) Predict(accelZ, dt float32) {
 // predicted movement since then, so corrections made in the meantime carry back too and are not repeated.
 func (f *Filter) heightBefore() float32 {
 	z := f.k.X[axis.Pos]
-	if f.cfg.RangeDelay <= 0 || f.lastDt <= 0 {
-		return z
-	}
-	back := min(int(f.cfg.RangeDelay/f.lastDt+0.5), historyLen, f.histN)
-	for i := 1; i <= back; i++ {
+	for i := 1; i <= f.delaySteps(); i++ {
 		z -= f.history[(f.histN-i)%historyLen]
 	}
 	return z
+}
+
+// delaySteps is how many Predict steps back a range reading was taken.
+func (f *Filter) delaySteps() int {
+	if f.cfg.RangeDelay <= 0 || f.lastDt <= 0 {
+		return 0
+	}
+	return min(int(f.cfg.RangeDelay/f.lastDt+0.5), historyLen, f.histN)
 }
 
 // UpdateBaro corrects with a baro height in m above sea level.
@@ -140,7 +144,8 @@ func (f *Filter) UpdateRange(dist, cosTilt float32) bool {
 	// A late reading is compared with the height estimate from when it was taken, and the
 	// difference corrects the current state, as in delayed fusion in PX4 EKF2.
 	// Only accepted readings keep range active, so after a knock the next reading picks up afresh.
-	if !f.k.Correct(axis.Pos, -(h-f.rangeRef)-f.heightBefore(), f.cfg.RangeNoise, f.cfg.Gate) {
+	delay := float32(f.delaySteps()) * f.lastDt
+	if !f.k.CorrectDelayed(-(h-f.rangeRef)-f.heightBefore(), f.cfg.RangeNoise, f.cfg.Gate, delay) {
 		return false
 	}
 	f.rangeAge = 0
