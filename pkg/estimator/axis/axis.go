@@ -80,3 +80,25 @@ func (f *Filter) Correct(i int, innov, sd, gate float32) bool {
 	}
 	return true
 }
+
+// CorrectDelayed corrects with innov, a position reading taken delay seconds ago minus the position then.
+// The gain uses the covariance back then, see Larsen et al, IEEE CDC 1998, "Incorporation of time delayed measurements in a discrete-time Kalman filter".
+func (f *Filter) CorrectDelayed(innov, sd, gate, delay float32) bool {
+	// Row of F(-delay) that maps the current state back to the position delay seconds ago.
+	back := [3]float32{1, -delay, -0.5 * delay * delay}
+	var c [3]float32
+	for j := range 3 {
+		c[j] = f.P[j][0]*back[0] + f.P[j][1]*back[1] + f.P[j][2]*back[2]
+	}
+	s := c[0]*back[0] + c[1]*back[1] + c[2]*back[2] + sd*sd
+	if gate > 0 && innov*innov > gate*gate*s {
+		return false
+	}
+	for a := range 3 {
+		f.X[a] += c[a] / s * innov
+		for b := range 3 {
+			f.P[a][b] -= c[a] * c[b] / s
+		}
+	}
+	return true
+}
