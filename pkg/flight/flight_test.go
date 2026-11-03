@@ -178,7 +178,7 @@ func TestInputLossLands(t *testing.T) {
 	w := newWorld(t)
 	w.takeoff()
 	w.pilot.Silent = true
-	w.run(w.cfg.Commander.LandTime+2, nil)
+	w.run(w.cfg.Commander.HoldTimeout+w.cfg.Commander.LandTime+1, nil)
 	s := w.f.Status()
 	if s.Armed || s.Failsafe != msg.FailsafeInputLost {
 		t.Errorf("status %+v", s)
@@ -337,6 +337,24 @@ func TestPosHoldLostStick(t *testing.T) {
 	w.run(0.5, nil)
 	if _, pitch, _ := w.f.Attitude().Q.Euler(); pitch > -w.cfg.Manual.MaxTilt*0.8 {
 		t.Errorf("pitch %v° after centring and pushing the stick again", fmath.Degrees(pitch))
+	}
+}
+
+// TestStaleSticksCentre stops getting input with the sticks pushed. They must count as centred,
+// but the Stabilize throttle stays so the thrust is not cut.
+func TestStaleSticksCentre(t *testing.T) {
+	w := newWorld(t)
+	w.arm(msg.ModeStabilize)
+	w.pilot.In.Throttle, w.pilot.In.Roll = 0.6, 1
+	w.run(0.1, nil)
+	thrust := w.f.attSp.Thrust
+	if roll, _, _ := w.f.attSp.Q.Euler(); roll < w.cfg.Manual.MaxTilt*0.9 {
+		t.Fatalf("roll setpoint %v with the stick pushed", roll)
+	}
+	w.pilot.Silent = true
+	w.run(0.3, nil)
+	if roll, _, _ := w.f.attSp.Q.Euler(); fmath.Abs(roll) > 0.01 || w.f.attSp.Thrust != thrust {
+		t.Errorf("roll setpoint %v and thrust %v after 0.3 s without input, want 0 and %v", roll, w.f.attSp.Thrust, thrust)
 	}
 }
 
@@ -632,7 +650,7 @@ func TestLEDAndReadings(t *testing.T) {
 		t.Error("flow used while on the ground")
 	}
 	w.pilot.Silent = true
-	w.run(1, nil)
+	w.run(w.cfg.Commander.HoldTimeout+0.5, nil)
 	if *l != (led{32, 32, 0}) {
 		t.Errorf("led %+v after input loss, want yellow", *l)
 	}

@@ -81,6 +81,8 @@ type Flight struct {
 	xySp     fmath.Vec3
 	xyHold   bool
 	xyLost   bool // PosHold lost its position, so the sticks wait for centre
+	stale    bool // no pilot input for a while, so the sticks count as centred
+	held     msg.ManualInput
 	landFrom float32
 	baroRef  float32 // Pa, first baro reading, heights are measured from it
 	landing  bool
@@ -268,13 +270,15 @@ func (f *Flight) Step(now msg.Time) {
 	mark(4, &pt)
 
 	wasArmed := f.status.Armed
-	f.status = f.cmd.Update(commander.State{
+	cs := commander.State{
 		Now:     now,
 		Input:   &f.input,
 		Tilt:    f.att.Q.Tilt(),
 		Battery: &f.batt,
 		Ready:   f.imu.Calibrated(),
-	})
+	}
+	f.status = f.cmd.Update(cs)
+	f.stale = f.cmd.Stale(cs)
 
 	switch {
 	case !f.status.Armed:
@@ -404,7 +408,7 @@ func (f *Flight) takeoffReset() {
 }
 
 func (f *Flight) control(now msg.Time, dt float32) {
-	in := &f.input
+	in := f.pilotInput()
 	m := &f.cfg.Manual
 	q := f.att.Q
 	mode := f.status.Mode
@@ -549,6 +553,17 @@ func (f *Flight) throttleCurve(s float32) float32 {
 	return hover + 2*(s-0.5)*(full-hover)
 }
 
+// pilotInput returns the pilot input, with the sticks centred once it is stale.
+// In Stabilize and Acro the throttle stays, since centring it would cut the thrust.
+func (f *Flight) pilotInput() *msg.ManualInput {
+	if !f.stale {
+		return &f.input
+	}
+	f.held = f.input
+	f.held.Roll, f.held.Pitch, f.held.Yaw, f.held.Climb = 0, 0, 0, 0
+	return &f.held
+}
+
 // stickCentre is how far from centre in -1 to 1 the roll and pitch sticks count as centred.
 const stickCentre = 0.1
 
@@ -559,7 +574,7 @@ func (f *Flight) lostPosition(roll, pitch float32, mode msg.FlightMode) (float32
 		f.xyLost = true
 	}
 	f.xyHold = false
-	in := &f.input
+	in := f.pilotInput()
 	if !f.xyLost || mode != msg.ModePosHold || (fmath.Abs(in.Roll) < stickCentre && fmath.Abs(in.Pitch) < stickCentre) {
 		f.xyLost = false
 		return roll, pitch
