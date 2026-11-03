@@ -15,9 +15,6 @@ import (
 	"tinygo.org/x/espradio"
 )
 
-// Channel is the Wi-Fi channel the stock joystick uses, CHANNEL in rc.hpp.
-const Channel = 3
-
 // The stock firmware announces 50 times at 50 ms only at boot. This keeps going until a joystick answers.
 const announceEvery = 50 * time.Millisecond
 
@@ -28,6 +25,7 @@ var _ hal.Input = (*Input)(nil)
 
 type Input struct {
 	mac      [6]byte
+	channel  uint8
 	dec      *input.AtomJoystick
 	mu       sync.Mutex
 	latest   msg.ManualInput
@@ -44,13 +42,14 @@ type Input struct {
 
 // Start brings up the radio on Channel, listens for the joystick, and announces this vehicle until it pairs.
 func Start() (*Input, error) {
+	ch := Channel()
 	if err := espradio.Enable(espradio.Config{}); err != nil {
 		return nil, err
 	}
 	if err := espradio.Start(); err != nil {
 		return nil, err
 	}
-	if err := espradio.SetChannel(Channel); err != nil {
+	if err := espradio.SetChannel(ch); err != nil {
 		return nil, err
 	}
 	mac, err := espradio.StationMAC()
@@ -60,11 +59,11 @@ func Start() (*Input, error) {
 	if err := espradio.ESPNowInit(); err != nil {
 		return nil, err
 	}
-	in := &Input{mac: mac, dec: input.NewAtomJoystick(mac)}
+	in := &Input{mac: mac, dec: input.NewAtomJoystick(mac), channel: ch}
 	espradio.ESPNowSetReceiveHandler(in.receive)
 	err = espradio.ESPNowAddPeer(espradio.ESPNowPeer{
 		Address: [6]byte(espradio.ESPNowBroadcastAddr),
-		Channel: Channel,
+		Channel: ch,
 		If:      espradio.WiFiInterfaceSTA,
 	})
 	if err != nil {
@@ -130,7 +129,7 @@ func (in *Input) announce() {
 	espradio.LockToCore0()
 	defer espradio.UnlockFromCore0()
 	var pkt [11]byte
-	pkt[0] = Channel
+	pkt[0] = in.channel
 	copy(pkt[1:7], in.mac[:])
 	copy(pkt[7:], announceTag[:])
 	addr := [6]byte(espradio.ESPNowBroadcastAddr)

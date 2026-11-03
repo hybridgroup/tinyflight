@@ -27,7 +27,7 @@ func main() {
 			time.Sleep(time.Second)
 		}
 	}
-	println("camera receiver ready on channel", espnowinput.Channel)
+	println("camera receiver ready on channel", espnowinput.Channel())
 	disp := newDisplay()
 	if disp != nil {
 		println("display found")
@@ -49,7 +49,7 @@ func start() error {
 	if err := espradio.Start(); err != nil {
 		return err
 	}
-	if err := espradio.SetChannel(espnowinput.Channel); err != nil {
+	if err := espradio.SetChannel(espnowinput.Channel()); err != nil {
 		return err
 	}
 	if err := espradio.ESPNowInit(); err != nil {

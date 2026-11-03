@@ -108,6 +108,8 @@ The joystick then scans the channels until it finds the drone. Tinyflight keeps 
 | Battery low for 2 s | Level out and descend, then disarm |
 | Tilt past about 70° in any mode but Acro | Stop motors at once |
 
+In a crowded place such as a conference, Wi-Fi can drop many packets. Fly in AltHold or PosHold there, since they ride out gaps of up to 2 s, and move to a quieter channel. See [Radio channel](../README.md#radio-channel).
+
 The failsafe landing ramps thrust down to half over 4 s, then disarms whether the drone is down or not. From a low hop that is fine, but from higher up it drops the rest of the way.
 
 ## First flight in Stabilize

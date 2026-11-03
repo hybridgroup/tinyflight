@@ -16,7 +16,7 @@ tinygo flash -target xiao-esp32c3 ./firmware/camera-receiver
 
 For another board, use its TinyGo target, such as `m5stamp-s3a`.
 
-At startup it prints `camera receiver ready on channel` with the ESP-NOW channel.
+At startup it prints `camera receiver ready on channel` with the ESP-NOW channel. If the StampFly flies on another channel, flash the receiver with the same `ChannelSetting`. See [Radio channel](../../README.md#radio-channel).
 
 ## Display
 

@@ -79,6 +79,7 @@ tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-motortest
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-camera
 tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-cameratest
+tinygo flash -scheduler=cores -target m5stamp-fly ./firmware/stampfly-channelscan
 ```
 
 ### Height limit
@@ -89,6 +90,16 @@ In AltHold and PosHold the StampFly will not climb past 10 m above where it took
 tinygo flash -scheduler=cores -target m5stamp-fly -ldflags="-X github.com/hybridgroup/tinyflight/boards/stampfly.MaxHeight=2" ./firmware/stampfly
 ```
 
+### Radio channel
+
+The StampFly and joystick talk on Wi-Fi channel 3 by default. In a crowded place such as a conference, run [`stampfly-channelscan`](firmware/stampfly-channelscan/README.md) to find a quieter channel. Then set it with `-ldflags` and pair the joystick again, since it saves the channel when it pairs:
+
+```
+tinygo flash -scheduler=cores -target m5stamp-fly -ldflags="-X github.com/hybridgroup/tinyflight/devices/espnowinput.ChannelSetting=13" ./firmware/stampfly
+```
+
+Flash the camera receiver with the same setting.
+
 ### Firmware
 
 | Firmware | What it does |
@@ -98,4 +109,5 @@ tinygo flash -scheduler=cores -target m5stamp-fly -ldflags="-X github.com/hybrid
 | [`stampfly`](firmware/stampfly/README.md) | The flight firmware. For bench tests, send lines over USB serial in the form `rc roll pitch yaw throttle arm mode`. Mode is 0 for acro, 1 for stabilize, 2 for althold and 3 for poshold. Built with `-tags blackbox`, it saves the last 5 flights to flash and prints the latest over USB every 10 s while disarmed. See [docs/joystick.md](docs/joystick.md#reading-the-flight-log). |
 | [`stampfly-camera`](firmware/stampfly-camera/README.md) | The flight firmware plus an AMG88xx thermal camera on the Grove port. It streams frames over ESP-NOW. See [docs/camera.md](docs/camera.md). |
 | [`stampfly-cameratest`](firmware/stampfly-cameratest/README.md) | Bench tool for the thermal camera. The motors stay off and frames go over USB to `tools/cameraview`. See [docs/camera.md](docs/camera.md#testing-on-the-bench). |
+| [`stampfly-channelscan`](firmware/stampfly-channelscan/README.md) | Counts the Wi-Fi traffic on each channel and prints the quietest one to fly on. The motors stay off. |
 | [`camera-receiver`](firmware/camera-receiver/README.md) | For an ESP32-C3 on the computer, not the StampFly. Prints camera frames heard over ESP-NOW for `tools/cameraview`, and shows them on an SSD1306 display if one is attached. See [docs/camera.md](docs/camera.md). |

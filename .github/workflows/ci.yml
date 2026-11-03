@@ -132,6 +132,8 @@ jobs:
             flags: -scheduler=cores -target=m5stamp-fly
           - name: stampfly-cameratest
             flags: -scheduler=cores -target=m5stamp-fly
+          - name: stampfly-channelscan
+            flags: -scheduler=cores -target=m5stamp-fly
           - name: camera-receiver
             flags: -target=xiao-esp32c3
     steps:

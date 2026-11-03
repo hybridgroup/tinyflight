@@ -12,7 +12,7 @@ All multi-byte values are little endian. Floats are IEEE 754 float32.
 ## Radio settings
 
 - **Transport:** ESP-NOW, unencrypted, on the station interface.
-- **Wi-Fi channel:** 3, which is `CHANNEL` in `rc.hpp`.
+- **Wi-Fi channel:** 3 by default, which is `CHANNEL` in `rc.hpp`. Tinyflight can be built for any channel from 1 to 13, see [Radio channel](../README.md#radio-channel).
 
 ## Pairing
 
@@ -28,7 +28,7 @@ The stock drone firmware sends the pairing packet only 50 times, at boot. Tinyfl
 
 | Offset | Size | Value |
 |---|---|---|
-| 0 | 1 | Wi-Fi channel, 3 |
+| 0 | 1 | Wi-Fi channel, 3 by default |
 | 1 | 6 | Drone MAC address |
 | 7 | 4 | `AA 55 16 88` |
 
