@@ -65,7 +65,7 @@ func StampFly() Params {
 	}
 }
 
-// Quad is the simulated vehicle. Position and velocity are NED with the ground at Z = 0.
+// Quad is the simulated vehicle. Position and velocity are NED with the floor at Z = 0.
 type Quad struct {
 	P      Params
 	Pos    fmath.Vec3
@@ -82,6 +82,8 @@ type Quad struct {
 	FlowLost bool
 	// FlowCloseValid keeps flow quality good below FlowMin, as the PMW3901 did on the bench when set down.
 	FlowCloseValid bool
+	// Terrain gives the height in m of the surface at x, y above the floor. Nil is a flat floor.
+	Terrain func(x, y float32) float32
 
 	accel fmath.Vec3
 	flow  fmath.Vec3 // flow counts gathered since the last ReadFlow
@@ -96,8 +98,19 @@ func New(p Params) *Quad {
 	return &Quad{P: p, Q: fmath.IdentityQuat(), rnd: NewRand(1)}
 }
 
-// OnGround reports whether the quad is at or below ground level.
-func (s *Quad) OnGround() bool { return s.Pos.Z >= 0 }
+// OnGround reports whether the quad is resting on the surface below it.
+func (s *Quad) OnGround() bool { return s.Clearance() <= 0 }
+
+// Surface returns the height in m of the surface below the quad above the floor.
+func (s *Quad) Surface() float32 {
+	if s.Terrain == nil {
+		return 0
+	}
+	return s.Terrain(s.Pos.X, s.Pos.Y)
+}
+
+// Clearance returns the height in m of the quad above the surface below it.
+func (s *Quad) Clearance() float32 { return -s.Pos.Z - s.Surface() }
 
 // Step advances the physics by dt seconds.
 func (s *Quad) Step(dt float32) {
@@ -130,9 +143,9 @@ func (s *Quad) Step(dt float32) {
 	s.Pos = s.Pos.Add(s.Vel.Scale(dt))
 	s.accel = acc
 
-	if s.Pos.Z >= 0 && s.Vel.Z >= 0 {
+	if surface := s.Surface(); s.Pos.Z >= -surface && s.Vel.Z >= 0 {
 		// Resting on the ground keeps it level and still.
-		s.Pos.Z = 0
+		s.Pos.Z = -surface
 		s.Vel = fmath.Vec3{}
 		s.Omega = fmath.Vec3{}
 		s.Q = fmath.QuatFromEuler(0, 0, s.Q.Yaw())
@@ -140,16 +153,16 @@ func (s *Quad) Step(dt float32) {
 	}
 	s.flow = s.flow.Add(s.flowRate().Scale(dt / p.FlowScale))
 	s.time += dt
-	s.hist[s.histN%len(s.hist)] = heightAt{s.time, s.Pos.Z}
+	s.hist[s.histN%len(s.hist)] = heightAt{s.time, -s.Clearance()}
 	s.histN++
 }
 
 type heightAt struct{ t, z float32 }
 
-// heightBefore returns the height RangeDelay seconds ago, or now when there is no delay.
+// heightBefore returns the height above the surface RangeDelay seconds ago, NED so up is negative.
 func (s *Quad) heightBefore() float32 {
 	if s.P.RangeDelay <= 0 || s.histN == 0 {
-		return s.Pos.Z
+		return -s.Clearance()
 	}
 	want := s.time - s.P.RangeDelay
 	n := min(s.histN, len(s.hist))
@@ -180,7 +193,7 @@ func (s *Quad) flowDistance() float32 {
 	if c < 0.5 {
 		return 0
 	}
-	return (-s.Pos.Z + 0.01) / c
+	return (s.Clearance() + 0.01) / c
 }
 
 func (s *Quad) noise(sd float32) float32 { return s.rnd.Normal() * sd }
@@ -212,7 +225,7 @@ func (s *Quad) ReadBaro(out *msg.BaroSample) error {
 	return nil
 }
 
-// ReadRange reports the distance to the ground along the body Z axis. It is invalid when tilted too far.
+// ReadRange reports the distance to the surface along the body Z axis. It is invalid when tilted too far.
 func (s *Quad) ReadRange(out *msg.RangeSample) error {
 	c := s.Q.Down().Z
 	out.Valid = false
