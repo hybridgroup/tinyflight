@@ -26,7 +26,7 @@ func setup() (flight.Hardware, bool) {
 		println("esp-now:", err.Error())
 	} else {
 		mac := radio.MAC()
-		println("esp-now ready, mac", hex(mac[0]), hex(mac[1]), hex(mac[2]), hex(mac[3]), hex(mac[4]), hex(mac[5]))
+		println("esp-now ready on channel", espnowinput.Channel(), "mac", hex(mac[0]), hex(mac[1]), hex(mac[2]), hex(mac[3]), hex(mac[4]), hex(mac[5]))
 		joystick = radio
 		b.Hardware.Input = input.Merge{radio, b.Hardware.Input}
 	}
