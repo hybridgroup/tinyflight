@@ -20,7 +20,21 @@ type Config struct {
 	RangeDelay float32 // s, how old a range reading is when it arrives, up to about 0.3 s at 400 Hz
 	// GroundAccelNoise replaces AccelNoise while on the ground, where bumps swing the accel. 0 keeps AccelNoise.
 	GroundAccelNoise float32
+	// StepGate is the most in m the range may jump between readings beyond the estimated movement
+	// before it counts as a change of surface. 0 disables.
+	StepGate float32
 }
+
+// Step detection settings. stepWindow is the longest gap in s between range readings that are
+// compared, stepTrack how fast the surface level follows, stepNoise how fast its scatter does.
+const (
+	stepWindow = 0.1
+	stepTrack  = 0.25
+	stepNoise  = 0.05
+	stepSigmas = 4
+	// stepMinHeight is the lowest range height in m where steps are looked for.
+	stepMinHeight = 0.15
+)
 
 // historyLen is how many past height changes are kept for late range readings.
 const historyLen = 128
@@ -40,6 +54,12 @@ type Filter struct {
 	histN   int
 	lastDt  float32
 	ground  bool
+
+	lastH     float32 // last range height, for StepGate
+	lastAge   float32
+	lastValid bool
+	level     float32 // range height plus estimated height, which stays put over a flat surface
+	levelVar  float32 // scatter of level from one reading to the next
 }
 
 // SetOnGround picks GroundAccelNoise while the vehicle sits on the ground.
@@ -59,6 +79,8 @@ func (f *Filter) Reset() {
 	f.rangeRefSet = false
 	f.rangeAge = f.cfg.RangeHold + 1
 	f.histN = 0
+	f.lastValid = false
+	f.levelVar = f.cfg.RangeNoise * f.cfg.RangeNoise
 }
 
 // Z returns the height in m, NED so up is negative.
@@ -85,6 +107,7 @@ func (f *Filter) Predict(accelZ, dt float32) {
 	before := f.k.X[axis.Pos]
 	f.k.Predict(accelZ, dt, noise, f.cfg.BiasNoise)
 	f.rangeAge += dt
+	f.lastAge += dt
 	f.history[f.histN%historyLen] = f.k.X[axis.Pos] - before
 	f.histN++
 	f.lastDt = dt
@@ -125,9 +148,11 @@ func (f *Filter) UpdateBaro(alt float32) bool {
 // UpdateRange corrects with a downward range reading in m and the cosine of the vehicle tilt.
 func (f *Filter) UpdateRange(dist, cosTilt float32) bool {
 	if dist <= 0 || dist > f.cfg.RangeMax || cosTilt < 0.7 {
+		f.lastValid = false
 		return false
 	}
 	h := dist * cosTilt
+	f.checkStep(h)
 	switch {
 	case !f.rangeRefSet:
 		// First reading after Reset, so the vehicle is on the ground at zero height.
@@ -150,6 +175,32 @@ func (f *Filter) UpdateRange(dist, cosTilt float32) bool {
 	}
 	f.rangeAge = 0
 	return true
+}
+
+// checkStep moves the range reference when the range jumps more than the vehicle could have moved,
+// so flying over the edge of a step or a rock leaves the height alone.
+func (f *Filter) checkStep(h float32) {
+	level := h + f.heightBefore()
+	if f.cfg.StepGate <= 0 || !f.lastValid || f.lastAge >= stepWindow || !f.rangeRefSet || !f.RangeActive() {
+		f.level = level
+		f.lastH, f.lastAge, f.lastValid = h, 0, true
+		return
+	}
+	step := level - f.level
+	gate := fmath.Max(f.cfg.StepGate, stepSigmas*fmath.Sqrt(f.levelVar))
+	// The raw range must jump too, or a wrong speed estimate would move the reference and run away.
+	// Liftoff bumps fool the speed estimate the same way, so stay out of it near the ground.
+	jump := h - f.lastH
+	if !f.ground && h > stepMinHeight && fmath.Abs(step) > gate && fmath.Abs(jump) > gate && step*jump > 0 {
+		f.rangeRef += step
+		f.level = level
+	} else {
+		f.level += stepTrack * step
+		// Clip so the steps themselves cannot widen the gate until it misses them.
+		c := fmath.Min(fmath.Abs(step), gate/2)
+		f.levelVar += stepNoise * (c*c - f.levelVar)
+	}
+	f.lastH, f.lastAge, f.lastValid = h, 0, true
 }
 
 // update is a Kalman correction for a direct height measurement z with standard deviation sd.

@@ -93,6 +93,7 @@ func Default() Config {
 			RangeMax:         2,
 			RangeHold:        0.3,
 			BaroTrack:        0.02,
+			StepGate:         0.03,
 		},
 		HorEst: horest.Config{
 			AccelNoise: 0.5,
