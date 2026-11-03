@@ -18,7 +18,7 @@ type terrainCase struct {
 	terrain func(x, y float32) float32
 	climb   float32 // s of extra full climb after takeoff
 	to      float32 // m to fly forward
-	known   string  // a known problem that makes this case fail
+	noise   float32 // m, range noise, 0 for the default
 }
 
 type flightLog struct {
@@ -38,6 +38,9 @@ func flyOver(t *testing.T, tc terrainCase, extraMass float32) flightLog {
 	r := newRig(t)
 	r.w.Quad.Terrain = tc.terrain
 	r.w.Quad.P.Mass += extraMass
+	if tc.noise > 0 {
+		r.w.Quad.P.RangeNoise = tc.noise
+	}
 	r.s.autoAlt, r.s.rate = true, true
 	var l flightLog
 	watch := func() {
@@ -116,11 +119,7 @@ func runTerrain(t *testing.T, cases []terrainCase) {
 				l := flyOver(t, tc, m.mass)
 				t.Logf("takeoff %.2f m, reached %.2f m, tilt %.1f°, speed %.2f m/s, clearance %.2f m, height error %.3f m, drift %.3f m",
 					l.takeoff, l.reached, fmath.Degrees(l.tilt), l.speed, l.clearance, l.heightErr, l.settleDrift)
-				p := l.problems(tc)
-				switch {
-				case len(p) > 0 && tc.known != "":
-					t.Skipf("known problem, %s: %v", tc.known, p)
-				case len(p) > 0:
+				if p := l.problems(tc); len(p) > 0 {
 					t.Error(p)
 				}
 			})
@@ -129,7 +128,8 @@ func runTerrain(t *testing.T, cases []terrainCase) {
 }
 
 func TestFlatFloor(t *testing.T) {
-	runTerrain(t, []terrainCase{{name: "flat", to: 3}})
+	// A noisy range at liftoff once fooled step detection and the drone shot up to 2.2 m.
+	runTerrain(t, []terrainCase{{name: "flat", to: 3}, {name: "noisy range", to: 3, noise: 0.03}})
 }
 
 func TestFlyOverHole(t *testing.T) {
@@ -155,9 +155,7 @@ func TestFlyOverChairs(t *testing.T) {
 func TestFlyOverRough(t *testing.T) {
 	runTerrain(t, []terrainCase{
 		{name: "pebbles", terrain: physics.Rough{Cell: 0.05, Max: 0.03, Seed: 1}.Height, to: 3},
-		{name: "rocks", terrain: physics.Rough{Cell: 0.2, Max: 0.15, Seed: 2}.Height, to: 3,
-			known: "range steps under the gate move the height"},
-		{name: "boulders", terrain: physics.Rough{Cell: 0.5, Max: 0.4, Seed: 3}.Height, to: 3,
-			known: "range steps under the gate move the height"},
+		{name: "rocks", terrain: physics.Rough{Cell: 0.2, Max: 0.15, Seed: 2}.Height, to: 3},
+		{name: "boulders", terrain: physics.Rough{Cell: 0.5, Max: 0.4, Seed: 3}.Height, to: 3},
 	})
 }
