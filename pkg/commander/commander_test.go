@@ -9,6 +9,9 @@ import (
 func testConfig() Config {
 	return Config{
 		InputTimeout:   0.5,
+		StaleInput:     0.2,
+		HoldTimeout:    2,
+		InputRecover:   0.5,
 		LowBattery:     3.4,
 		LowBatteryTime: 1,
 		MaxTilt:        1,
@@ -151,5 +154,71 @@ func TestLowBattery(t *testing.T) {
 	}
 	if s := h.step(2*second, false); !s.Landing || s.Failsafe != msg.FailsafeLowBattery {
 		t.Fatalf("status %+v", s)
+	}
+}
+
+// armIn arms in mode with fresh input.
+func armIn(mode msg.FlightMode) *harness {
+	h := newHarness()
+	h.in.Mode = mode
+	h.step(1000, false)
+	h.in.Arm = true
+	h.step(1000, false)
+	return h
+}
+
+func TestStale(t *testing.T) {
+	h := armIn(msg.ModeAltHold)
+	h.step(second/10, true)
+	if h.c.Stale(State{Now: h.now, Input: &h.in}) {
+		t.Error("stale after 0.1 s")
+	}
+	h.step(second/5, true)
+	if !h.c.Stale(State{Now: h.now, Input: &h.in}) {
+		t.Error("not stale after 0.3 s")
+	}
+}
+
+func TestHoldTimeout(t *testing.T) {
+	h := armIn(msg.ModeAltHold)
+	if s := h.step(3*second/2, true); s.Landing {
+		t.Fatal("landing after 1.5 s without input in AltHold")
+	}
+	if s := h.step(second, true); !s.Landing || s.Failsafe != msg.FailsafeInputLost {
+		t.Fatalf("not landing after 2.5 s without input, status %+v", s)
+	}
+	h = armIn(msg.ModeStabilize)
+	if s := h.step(3*second/5, true); !s.Landing {
+		t.Fatal("not landing after 0.6 s without input in Stabilize")
+	}
+}
+
+func TestInputRecovers(t *testing.T) {
+	h := armIn(msg.ModePosHold)
+	h.step(3*second, true)
+	for range 3 {
+		h.step(second/10, false)
+	}
+	for range 3 {
+		h.step(second/10, true)
+	}
+	for range 4 {
+		h.step(second/10, false)
+	}
+	if s := h.step(second/20, false); !s.Landing {
+		t.Fatal("stopped landing after a gap and 0.45 s of input")
+	}
+	h.step(second/10, false)
+	if s := h.step(second/10, false); s.Landing || s.Failsafe != msg.FailsafeNone || !s.Armed {
+		t.Fatalf("still landing after steady input, status %+v", s)
+	}
+
+	h = armIn(msg.ModeStabilize)
+	h.step(second, true)
+	for range 10 {
+		h.step(second/10, false)
+	}
+	if s := h.step(second/10, false); !s.Landing {
+		t.Error("Stabilize stopped landing when input came back")
 	}
 }

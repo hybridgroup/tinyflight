@@ -49,6 +49,8 @@ type rig struct {
 	w *World
 	f *flight.Flight
 	s stick
+	// pass reports whether a joystick packet gets through, nil for a perfect link.
+	pass func() bool
 }
 
 func newRig(t *testing.T) *rig {
@@ -59,7 +61,7 @@ func newRig(t *testing.T) *rig {
 // fly sends the stick 100 times a second, like the joystick, for d seconds.
 func (r *rig) fly(d float32, check func()) {
 	for i := range int(d * 400) {
-		if i%4 == 0 {
+		if i%4 == 0 && (r.pass == nil || r.pass()) {
 			r.w.Joystick.Send(r.s.packet(MAC))
 		}
 		r.w.Step(r.f)
@@ -141,11 +143,11 @@ func TestSignalLost(t *testing.T) {
 	r.arm()
 	r.s.throttle = 1
 	r.fly(1, nil)
-	for range 400 {
+	for range 1000 {
 		r.w.Step(r.f)
 	}
 	if r.f.Status().Failsafe == msg.FailsafeNone {
-		t.Errorf("no failsafe after 1 s without packets, status %+v", r.f.Status())
+		t.Errorf("no failsafe after 2.5 s without packets, status %+v", r.f.Status())
 	}
 }
 

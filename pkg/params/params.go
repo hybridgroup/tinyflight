@@ -134,6 +134,9 @@ func Default() Config {
 		Mixer: mixer.Config{Geometry: mixer.QuadX, ThrustModel: 1, Idle: 0.05},
 		Commander: commander.Config{
 			InputTimeout:   0.5,
+			StaleInput:     0.2,
+			HoldTimeout:    2,
+			InputRecover:   0.5,
 			LowBattery:     3.34,
 			LowBatteryTime: 2,
 			MaxTilt:        1.2,

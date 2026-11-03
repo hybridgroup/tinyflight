@@ -102,7 +102,9 @@ The joystick then scans the channels until it finds the drone. Tinyflight keeps 
 
 | Problem | What happens |
 |---|---|
-| Signal lost for 0.5 s | Level out and descend, then disarm |
+| Signal lost for 0.2 s | The sticks count as centred. In AltHold and PosHold it holds its spot. In Stabilize and Acro it levels out and keeps the throttle |
+| Signal lost for 2 s in AltHold or PosHold, or 0.5 s in Stabilize or Acro | Level out and descend, then disarm |
+| Signal back for 0.5 s during that landing, in AltHold or PosHold | Stop landing and hold the height it got to |
 | Battery low for 2 s | Level out and descend, then disarm |
 | Tilt past about 70° in any mode but Acro | Stop motors at once |
 
