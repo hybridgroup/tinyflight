@@ -318,6 +318,28 @@ func TestPosHoldFlowLost(t *testing.T) {
 	}
 }
 
+// TestPosHoldLostStick loses flow with the stick held forward. It must level out, then tilt again
+// only after the sticks are centred.
+func TestPosHoldLostStick(t *testing.T) {
+	w := newWorld(t)
+	w.takeoffIn(msg.ModePosHold)
+	w.pilot.In.Pitch = -1
+	w.run(2, nil)
+	w.quad.FlowLost = true
+	var maxTilt float32
+	w.run(3, func() { maxTilt = fmath.Max(maxTilt, w.quad.Q.Tilt()) })
+	if maxTilt > fmath.Radians(5) || w.quad.Vel.X > 0.7 {
+		t.Errorf("tilted %v° and reached %v m/s with the stick held after losing flow", fmath.Degrees(maxTilt), w.quad.Vel.X)
+	}
+	w.pilot.In.Pitch = 0
+	w.run(0.5, nil)
+	w.pilot.In.Pitch = -1
+	w.run(0.5, nil)
+	if _, pitch, _ := w.f.Attitude().Q.Euler(); pitch > -w.cfg.Manual.MaxTilt*0.8 {
+		t.Errorf("pitch %v° after centring and pushing the stick again", fmath.Degrees(pitch))
+	}
+}
+
 // TestFlowSetDown drops the quad to just above the ground in one step while it slides, like setting it down by hand.
 // The height filter rejects the sudden range change, so only the raw range shows it is too close for flow.
 func TestFlowSetDown(t *testing.T) {

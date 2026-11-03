@@ -51,7 +51,7 @@ The left tile is the control mode, Stable in blue for angle or Sport in yellow f
 
 Altitude mode is on at power on, so press the right button once on the setup screen to fly Stabilize. The right tile then shows Manual.
 
-PosHold holds the spot over the ground and needs a textured surface below, between 8 cm and about 2 m. Elsewhere it flies like AltHold. See [architecture.md](architecture.md#flight-modes).
+PosHold holds the spot over the ground and needs a textured surface below, between 8 cm and about 2 m. Elsewhere it flies like AltHold. If it loses its spot while you hold the right stick, for example over a deep hole, it levels out and coasts. Centre the stick to steer again. See [architecture.md](architecture.md#flight-modes).
 
 ## Arming
 

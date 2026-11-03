@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hybridgroup/tinyflight/boards/stampfly"
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 	physics "github.com/hybridgroup/tinyflight/pkg/sim"
@@ -25,6 +26,7 @@ type flightLog struct {
 	disarmed    bool
 	failsafe    msg.Failsafe
 	tilt        float32 // rad, most while flying over
+	speed       float32 // m/s, most horizontal speed
 	clearance   float32 // m, least height above the surface
 	heightErr   float32 // m, most change in height above the floor
 	reached     float32 // m forward when the stick was let go
@@ -58,6 +60,7 @@ func flyOver(t *testing.T, tc terrainCase, extraMass float32) flightLog {
 	track := func() {
 		watch()
 		l.tilt = fmath.Max(l.tilt, q.Q.Tilt())
+		l.speed = fmath.Max(l.speed, fmath.Vec3{X: q.Vel.X, Y: q.Vel.Y}.Norm())
 		l.clearance = fmath.Min(l.clearance, q.Clearance())
 		l.heightErr = fmath.Max(l.heightErr, fmath.Abs(-q.Pos.Z-l.takeoff))
 	}
@@ -91,6 +94,9 @@ func (l flightLog) problems(tc terrainCase) []string {
 	if l.heightErr > 0.25 {
 		p = append(p, fmt.Sprintf("height above the floor changed %.2f m", l.heightErr))
 	}
+	if max := 2 * stampfly.Config().Horizontal.MaxSpeed; l.speed > max {
+		p = append(p, fmt.Sprintf("reached %.1f m/s, over %.1f m/s", l.speed, max))
+	}
 	if l.tilt > fmath.Radians(20) {
 		p = append(p, fmt.Sprintf("tilted %.1f°", fmath.Degrees(l.tilt)))
 	}
@@ -108,8 +114,8 @@ func runTerrain(t *testing.T, cases []terrainCase) {
 		}{{"bare", 0}, {"camera", cameraMass}} {
 			t.Run(tc.name+"/"+m.name, func(t *testing.T) {
 				l := flyOver(t, tc, m.mass)
-				t.Logf("takeoff %.2f m, reached %.2f m, tilt %.1f°, clearance %.2f m, height error %.3f m, drift %.3f m",
-					l.takeoff, l.reached, fmath.Degrees(l.tilt), l.clearance, l.heightErr, l.settleDrift)
+				t.Logf("takeoff %.2f m, reached %.2f m, tilt %.1f°, speed %.2f m/s, clearance %.2f m, height error %.3f m, drift %.3f m",
+					l.takeoff, l.reached, fmath.Degrees(l.tilt), l.speed, l.clearance, l.heightErr, l.settleDrift)
 				p := l.problems(tc)
 				switch {
 				case len(p) > 0 && tc.known != "":
@@ -130,8 +136,7 @@ func TestFlyOverHole(t *testing.T) {
 	runTerrain(t, []terrainCase{
 		{name: "step down", terrain: physics.Hole(1, 2, 0.5), to: 3},
 		{name: "narrow", terrain: physics.Hole(1, 1.3, 0.5), to: 3},
-		{name: "out of range", terrain: physics.Hole(1, 2.5, 3), to: 3.5,
-			known: "PosHold falls back to stick tilt when range and flow drop out"},
+		{name: "out of range", terrain: physics.Hole(1, 2.5, 3), to: 3.5},
 		{name: "drop off", terrain: physics.Hole(1, 100, 0.8), to: 3},
 	})
 }
