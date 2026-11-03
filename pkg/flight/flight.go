@@ -80,6 +80,7 @@ type Flight struct {
 	zSp      float32
 	xySp     fmath.Vec3
 	xyHold   bool
+	xyLost   bool // PosHold lost its position, so the sticks wait for centre
 	landFrom float32
 	baroRef  float32 // Pa, first baro reading, heights are measured from it
 	landing  bool
@@ -393,7 +394,7 @@ func (f *Flight) takeoffReset() {
 	f.horCtl.Reset()
 	f.altEst.Reset()
 	f.horEst.Reset()
-	f.xyHold = false
+	f.xyHold, f.xyLost = false, false
 	f.pos.ZValid = false
 	f.pos.Z, f.pos.VZ = 0, 0
 	f.yawSp = f.att.Q.Yaw()
@@ -433,7 +434,7 @@ func (f *Flight) control(now msg.Time, dt float32) {
 		if mode == msg.ModePosHold && f.pos.XYValid {
 			roll, pitch = f.holdPosition(roll, pitch, dt)
 		} else {
-			f.xyHold = false
+			roll, pitch = f.lostPosition(roll, pitch, mode)
 		}
 		f.yawSp = fmath.WrapPi(f.yawSp + yawRate*dt)
 		f.attSp.Q = fmath.QuatFromEuler(roll, pitch, f.yawSp)
@@ -548,10 +549,29 @@ func (f *Flight) throttleCurve(s float32) float32 {
 	return hover + 2*(s-0.5)*(full-hover)
 }
 
+// stickCentre is how far from centre in -1 to 1 the roll and pitch sticks count as centred.
+const stickCentre = 0.1
+
+// lostPosition levels out when PosHold loses its position, since a held stick meant a speed and would now
+// mean a tilt. Once the sticks are centred they set the tilt as in AltHold.
+func (f *Flight) lostPosition(roll, pitch float32, mode msg.FlightMode) (float32, float32) {
+	if f.xyHold && mode == msg.ModePosHold {
+		f.xyLost = true
+	}
+	f.xyHold = false
+	in := &f.input
+	if !f.xyLost || mode != msg.ModePosHold || (fmath.Abs(in.Roll) < stickCentre && fmath.Abs(in.Pitch) < stickCentre) {
+		f.xyLost = false
+		return roll, pitch
+	}
+	return 0, 0
+}
+
 // holdPosition turns the roll and pitch stick angles into a speed and returns the tilt that holds that speed.
 // With the sticks centred it holds the current spot.
 func (f *Flight) holdPosition(roll, pitch, dt float32) (float32, float32) {
 	pos := fmath.Vec3{X: f.pos.X, Y: f.pos.Y}
+	f.xyLost = false
 	if !f.xyHold {
 		f.xyHold = true
 		f.xySp = pos

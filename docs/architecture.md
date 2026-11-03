@@ -162,7 +162,7 @@ The rate loop only has to make the vehicle spin at a chosen speed. That's quick 
 | Acro | spin rate | Flips and fast flying. The vehicle doesn't level itself. |
 | Stabilize | tilt angle, throttle sets thrust | Normal flying. Letting go of the sticks levels the vehicle. |
 | AltHold | tilt angle, throttle stick sets climb rate | Like Stabilize, but holds height when the stick is centred. |
-| PosHold | speed, throttle stick sets climb rate | Like AltHold, but also holds its spot over the ground when the sticks are centred. It needs the optical flow sensor and the downward distance sensor. Above about 2 m, below 8 cm, or over a surface with no texture, it flies like AltHold. |
+| PosHold | speed, throttle stick sets climb rate | Like AltHold, but also holds its spot over the ground when the sticks are centred. It needs the optical flow sensor and the downward distance sensor. Above about 2 m, below 8 cm, or over a surface with no texture, it flies like AltHold. If it loses its spot while you hold a stick, it levels out until you centre the sticks. |
 
 ## Safety
 
