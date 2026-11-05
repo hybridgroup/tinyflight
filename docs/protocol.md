@@ -68,7 +68,7 @@ This is done by `pkg/input/atom.go`.
 
 ## Telemetry packet, drone to joystick, 120 bytes
 
-Tinyflight broadcasts it 20 times per second once a joystick has paired. The joystick shows the drone attitude, battery and altitude. In altitude hold mode it also needs the flight mode, or its arm button does nothing.
+Tinyflight sends it 20 times per second to the MAC address of the first joystick packet it accepts, as `telemetry_send` in [rc.cpp](https://github.com/m5stack/M5StampFly/blob/main/src/rc.cpp) does. A broadcast gets no acknowledgement or retries, so on a busy channel too many were lost. The joystick shows the drone attitude, battery and altitude. In altitude hold mode it also needs the flight mode, or its arm button does nothing. Without telemetry for a while it shows No StampFly, and its screen press stops sending arm and disarm. `tel_failed` in the status line counts packets the joystick did not acknowledge.
 
 **Header:** bytes 0 and 1 are both 88.
 

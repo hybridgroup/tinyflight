@@ -31,9 +31,10 @@ type Input struct {
 	latest   msg.ManualInput
 	fresh    bool
 	paired   atomic.Bool
+	joyAddr  [6]byte // joystick MAC, written once before paired is set
 	Packets  atomic.Uint32
 	Rejected atomic.Uint32
-	// Sent and SendFailed count telemetry packets. A broadcast gets no reply, so Sent only means it was queued.
+	// Sent counts telemetry packets queued. SendFailed counts those that failed to queue or the joystick did not acknowledge.
 	Sent         atomic.Uint32
 	SendFailed   atomic.Uint32
 	CameraSent   atomic.Uint32
@@ -61,6 +62,7 @@ func Start() (*Input, error) {
 	}
 	in := &Input{mac: mac, dec: input.NewAtomJoystick(mac), channel: ch}
 	espradio.ESPNowSetReceiveHandler(in.receive)
+	espradio.ESPNowSetSendHandler(in.sent)
 	err = espradio.ESPNowAddPeer(espradio.ESPNowPeer{
 		Address: [6]byte(espradio.ESPNowBroadcastAddr),
 		Channel: ch,
@@ -73,18 +75,30 @@ func Start() (*Input, error) {
 	return in, nil
 }
 
-// RunTelemetry broadcasts telemetry forever so the joystick can show the vehicle state.
+// RunTelemetry sends telemetry to the joystick forever so it can show the vehicle state.
 // fill is called before each send. It runs on core 0 and does not allocate.
+// It goes to the joystick's own address, as telemetry_send in rc.cpp does, since a broadcast gets no
+// acknowledgement or retries and is easily lost on a busy channel.
 func (in *Input) RunTelemetry(every time.Duration, fill func(t *input.AtomTelemetry)) {
 	espradio.LockToCore0()
 	defer espradio.UnlockFromCore0()
 	var t input.AtomTelemetry
 	var pkt [input.AtomTelemetrySize]byte
-	addr := [6]byte(espradio.ESPNowBroadcastAddr)
+	var addr [6]byte
+	added := false
 	for {
 		time.Sleep(every)
 		if !in.paired.Load() {
 			continue
+		}
+		if !added {
+			addr = in.joyAddr
+			err := espradio.ESPNowAddPeer(espradio.ESPNowPeer{Address: addr, Channel: in.channel, If: espradio.WiFiInterfaceSTA})
+			if err != nil {
+				in.SendFailed.Add(1)
+				continue
+			}
+			added = true
 		}
 		fill(&t)
 		t.Encode(&pkt)
@@ -147,10 +161,20 @@ func (in *Input) receive(r espradio.ESPNowReceive) {
 	}
 	in.mu.Unlock()
 	if err == nil {
-		in.paired.Store(true)
+		if !in.paired.Load() {
+			in.joyAddr = r.SourceAddress
+			in.paired.Store(true)
+		}
 		in.Packets.Add(1)
 	} else {
 		in.Rejected.Add(1)
+	}
+}
+
+// sent counts telemetry the joystick did not acknowledge. Broadcasts are never acknowledged, so they are skipped.
+func (in *Input) sent(r espradio.ESPNowSendReport) {
+	if r.DestinationAddress != [6]byte(espradio.ESPNowBroadcastAddr) && r.Status != espradio.ESPNowSendSuccess {
+		in.SendFailed.Add(1)
 	}
 }
 
