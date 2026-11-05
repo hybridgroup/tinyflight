@@ -146,6 +146,9 @@ func (f *Flight) Position() msg.LocalPosition { return f.pos }
 // Motors returns the last motor commands.
 func (f *Flight) Motors() msg.MotorOutputs { return f.motors }
 
+// Airborne reports whether the pilot has asked for thrust since arming.
+func (f *Flight) Airborne() bool { return f.airborne }
+
 // Input returns the latest pilot input.
 func (f *Flight) Input() msg.ManualInput { return f.input }
 

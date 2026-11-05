@@ -3,6 +3,8 @@
 package main
 
 import (
+	"sync/atomic"
+
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
@@ -50,6 +52,10 @@ type heightTrace struct {
 	n        int // passes recorded since arming
 	start    msg.Time
 	armed    bool
+	armedAt  msg.Time
+	live     bool          // recording a flight started in this arming
+	gen      atomic.Uint32 // the flight log adds one when it starts a flight, which restarts the trace
+	seen     uint32
 	frozen   bool
 	trigAt   uint32 // µs after arming when the trigger fired, 0 if it did not
 	climbAt  uint32 // µs after arming when the climb stick was last off centre
@@ -63,13 +69,20 @@ type heightTrace struct {
 func (t *heightTrace) record(s *flight.HeightStep) {
 	armed := t.isArmed()
 	if armed && !t.armed {
-		// The filter was reset on this pass, so recording starts with the next one.
-		t.n, t.start, t.frozen, t.trigAt, t.climbAt = 0, s.Time, false, 0, 0
-		t.armed = true
+		// The filter was reset on this pass, so recording starts with the next one at the earliest.
+		t.armed, t.armedAt, t.live = true, s.Time, false
 		return
 	}
 	t.armed = armed
-	if !armed || t.frozen {
+	if !armed {
+		return
+	}
+	// Wait for the flight log to start a flight, so an unsaved one is not overwritten by an arming that never lifts off.
+	if g := t.gen.Load(); g != t.seen {
+		t.seen, t.live = g, true
+		t.n, t.start, t.frozen, t.trigAt, t.climbAt = 0, t.armedAt, false, 0, 0
+	}
+	if !t.live || t.frozen {
 		return
 	}
 	us := uint32(s.Time - t.start)
