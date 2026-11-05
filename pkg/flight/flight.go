@@ -414,7 +414,13 @@ func (f *Flight) control(now msg.Time, dt float32) {
 	mode := f.status.Mode
 	f.updateHover(dt)
 	thrust := f.throttleCurve(in.Throttle)
-	ground := f.onGround(thrust)
+	holdHeight := mode == msg.ModeAltHold || mode == msg.ModePosHold
+	// In the hold modes the stick asks for a climb rate, so judge the ground by the thrust last sent.
+	lastThrust := thrust
+	if holdHeight {
+		lastThrust = f.tt.Thrust
+	}
+	ground := f.onGround(lastThrust)
 	if f.landed(ground, dt) {
 		f.cmd.Disarm()
 		f.status.Armed = false
@@ -446,7 +452,6 @@ func (f *Flight) control(now msg.Time, dt float32) {
 		f.rateSp.Rate = f.attCtl.Update(q, f.attSp.Q, yawRate)
 	}
 
-	holdHeight := mode == msg.ModeAltHold || mode == msg.ModePosHold
 	if !f.airborne && !f.status.Landing && ((holdHeight && in.Climb > 0) || (!holdHeight && in.Throttle > 0)) {
 		f.airborne = true
 	}
