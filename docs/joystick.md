@@ -159,7 +159,7 @@ The last 11 s of a flight are also kept in memory that survives a reset, such as
 2. Plug in USB and read the serial output.
 3. Note roughly when you made each move, counting from arming, so the log can be matched to what you saw.
 
-Saving pauses the flight loop for about a second, so it only happens while disarmed, and it stops at once if you arm.
+Saving pauses the flight loop for about a second, so it only happens while disarmed, and it stops at once if you arm. A flight that is not saved yet is kept until the next arming lifts off, and a save stopped by arming is tried again a second after you disarm. So arming and disarming on the ground does not lose it.
 
 Each log line has the time since arming in ms, the position and speed estimate in mm and mm/s, roll, pitch and yaw in tenths of a degree, thrust from 0 to 1000, the raw range in mm, body Z accel and the height filter's accel bias in mm/s², flow quality, mode, and whether the position and height estimates are valid. The last columns show how each flow reading was used. They are the flow rate and the mean gyro rate over the same reading in mrad/s, the speed the estimator made of it in mm/s, and flags where 1 is sensor valid, 2 passed the height checks, 4 north accepted and 8 east accepted. Then come the stick inputs, from -1000 to 1000 with throttle from 0 to 1000, the vertical speed in mm/s, the height setpoint in mm, the battery in mV, and last the torque the roll, pitch and yaw rate integrators hold, in ten thousandths, which in a steady hover is the trim the drone needs.
 

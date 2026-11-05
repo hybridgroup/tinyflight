@@ -98,7 +98,8 @@ func startBlackbox(f *flight.Flight) {
 
 // run samples at logPeriod while armed, saves the flight to flash after landing, and prints the
 // latest saved flight every logInterval while disarmed. A tail left in RTC memory by a reset is
-// saved at startup.
+// saved at startup. An unsaved flight is kept until the next arming lifts off, and a save stopped
+// by arming is tried again after disarming.
 func (l *flightLog) run(f *flight.Flight) {
 	var start, lastPrint, disarmed time.Time
 	armed := func() bool { return f.Status().Armed }
@@ -113,29 +114,37 @@ func (l *flightLog) run(f *flight.Flight) {
 		}
 		tail.magic = 0
 	}
-	wasArmed, unsaved := false, false
+	wasArmed, unsaved, recording := false, false, false
 	for {
 		time.Sleep(logPeriod)
 		now := armed()
-		switch {
-		case now && !wasArmed:
-			l.n = 0
+		if now && !wasArmed {
 			start = time.Now()
+			recording = false
+		}
+		switch {
+		case now && !recording && (!unsaved || f.Airborne()):
+			l.n = 0
 			tail.magic, tail.next, tail.count = tailMagic, 0, 0
+			trace.gen.Add(1)
+			recording, unsaved = true, true
 			fallthrough
-		case now:
+		case now && recording:
 			l.add(f, start)
-			unsaved = true
+			disarmed = time.Now()
+		case now:
 			disarmed = time.Now()
 		case unsaved && time.Since(disarmed) >= saveDelay:
 			trace.inOrder()
-			if err := store.save(slotFlight, l.entries[:l.n], trace.entries[:trace.count()], trace.trigAt, armed); err != nil {
+			err := store.save(slotFlight, l.entries[:l.n], trace.entries[:trace.count()], trace.trigAt, armed)
+			if err != nil {
 				println("save:", err.Error())
 			} else {
 				// The whole flight is saved, so the tail is not needed after a reset.
 				tail.magic = 0
 			}
-			unsaved = false
+			_, stopped := err.(errArmed)
+			unsaved = stopped
 		case time.Since(lastPrint) < logInterval:
 		case store.latest >= 0:
 			store.print()
