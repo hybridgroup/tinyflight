@@ -28,6 +28,48 @@ flowchart LR
 4. **Controllers** turn "where I want to be" into "how hard to push".
 5. **Mixer** splits that push into one speed per motor.
 
+## Firmware Architecture
+
+```mermaid
+flowchart TD
+    subgraph firmware
+        subgraph board
+            radio
+            motors
+        end
+        subgraph devices
+            IMU
+            ToF
+            flow
+            barometer
+        end
+        subgraph additions
+            cameras
+        end
+        flightcontroller
+    end
+    devices --> flightcontroller
+    board <--> flightcontroller
+    additions <--> board
+```
+
+## Cores Architecture
+
+```mermaid
+flowchart TD
+    subgraph esp32s3
+        subgraph core1
+            FC[flight controller]
+        end
+        subgraph core0
+            A[radio]
+            B[sensors]
+            C[blackbox]
+            D[additional hardware]
+        end
+    end
+```
+
 ## Coordinate frames and units
 
 Everything uses SI units: metres, seconds, radians, m/s². Like PX4:
@@ -74,73 +116,104 @@ Hardware specific code lives outside `pkg/`:
 | `tools/tinyflightsim` | A local web server that builds the firmware with TinyGo to WebAssembly and flies it in the browser. It has its own `go.mod`. |
 | `tools/estimate` | Host-only checks against [go-estimate](https://github.com/milosgajdos/go-estimate). It has its own `go.mod`, so gonum never gets into the firmware. |
 
-## How the packages connect
+## Module Interactions
 
-This shows the major parts of the StampFly flight firmware and how they fit together. Arrow labels show the data that moves between them. Every arrow between `devices` and `flight` goes through a `pkg/hal` interface. `pkg/fmath` and `pkg/msg` are used almost everywhere, so they are left out.
+This shows the major parts of the StampFly flight firmware and how they fit together.
 
 ```mermaid
 flowchart LR
     subgraph tinyflight
-        subgraph firmware
-            fw[stampfly]
+        subgraph inputs
+            radio
+            chips
+            board
         end
-        subgraph boards
-            board[stampfly]
+        subgraph flightcontrol
+            sensors
+            estimators
+            commander
+            controllers
+            mixer
         end
-        fw--New, Config-->board
-        subgraph devin [devices]
-            chips[bmi270, bmm150, bmp280,<br/>ina3221, pmw3901, vl53l3cx]
-            radio[espnowinput, lineinput]
-        end
-        board--set up-->chips
-        board--set up-->radio
-        subgraph pkg
-            params
-            input
-            subgraph flight
-                sensors
-                subgraph estimators
-                    estatt[attitude]
-                    estalt[altitude]
-                    esthor[horizontal]
-                end
-                commander
-                subgraph controllers
-                    pos[position]
-                    att[attitude]
-                    rate
-                end
-                mixer
-            end
-            subgraph shared
-                filter
-                pid
-                axis
-            end
-        end
-        board--default gains-->params
-        params--gains-->flight
-        radio--decode-->input
+        board--gains-->flightcontrol
         chips--IMU, flow, baro, ToF-->sensors
         radio--sticks-->commander
         sensors--samples-->estimators
         estimators--state-->commander
-        estimators--state-->pos
-        commander--mode, setpoints-->pos
-        pos--tilt, thrust-->att
-        att--spin rate-->rate
-        rate--torque-->mixer
-        flight-->shared
-        subgraph devout [devices]
+        estimators--state-->controllers
+        commander--mode, setpoints-->controllers
+        controllers--torque-->mixer
+        subgraph devout [outputs]
             motors[pwmmotors]
         end
         mixer--motor outputs-->motors
     end
-    devin-->drivers[tinygo.org/x/drivers]
-    devout-->drivers
 ```
 
-## Why the controllers come in a chain
+### Inputs
+
+```mermaid
+flowchart LR
+    subgraph inputs
+        radio
+        chips
+        board
+    end
+    subgraph flightcontrol
+        sensors
+        commander
+    end
+    board--gains-->flightcontrol
+    chips--IMU, flow, baro, ToF-->sensors
+    radio--sticks-->commander
+```
+
+### Flight Control
+
+```mermaid
+flowchart LR
+    subgraph flightcontrol
+        sticks-->commander
+        sensors
+        subgraph estimators
+            estatt[attitude]
+            estalt[altitude]
+            esthor[horizontal]
+        end
+        commander
+        subgraph controllers
+            pos[position]
+            att[attitude]
+            rate
+        end
+        mixer
+    end
+    sensors--samples-->estimators
+    estimators--state-->commander
+    estimators--state-->pos
+    commander--mode, setpoints-->pos
+    pos--tilt, thrust-->att
+    att--spin rate-->rate
+    rate--torque-->mixer
+```
+
+### Output
+
+```mermaid
+flowchart LR
+    imu([IMU]) --> sensors --> estimators --> commander
+    pilot([pilot input]) --> commander
+    estimators --> position
+    commander --> position
+
+    subgraph controllers [controllers and mixer]
+        position --> attitude --> rate --> mixer
+    end
+
+    mixer --> motors([motors])
+```
+
+## Controller chaining
 
 Each loop in the chain controls something that's faster and easier than the loop above it:
 
