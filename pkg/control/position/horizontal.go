@@ -17,6 +17,7 @@ type HorizontalConfig struct {
 type Horizontal struct {
 	cfg    HorizontalConfig
 	vn, ve pid.PID
+	freeze bool
 }
 
 // NewHorizontal returns a horizontal position controller using cfg.
@@ -30,6 +31,9 @@ func (c *Horizontal) Reset() {
 	c.ve.Reset()
 }
 
+// Freeze stops the speed integrators while on is true, for example while the sticks ask for a speed.
+func (c *Horizontal) Freeze(on bool) { c.freeze = on }
+
 // Update returns roll and pitch in rad. Positions and speeds are NED and only X and Y are used.
 // velFF is an extra speed in m/s, for example from the sticks, and yaw is the heading in rad.
 func (c *Horizontal) Update(posSp, pos, vel, velFF fmath.Vec3, yaw, dt float32) (roll, pitch float32) {
@@ -38,8 +42,13 @@ func (c *Horizontal) Update(posSp, pos, vel, velFF fmath.Vec3, yaw, dt float32) 
 	if n := velSp.Norm(); n > c.cfg.MaxSpeed {
 		velSp = velSp.Scale(c.cfg.MaxSpeed / n)
 	}
+	in, ie := c.vn.Integral(), c.ve.Integral()
 	an := c.vn.Update(velSp.X, vel.X, dt)
 	ae := c.ve.Update(velSp.Y, vel.Y, dt)
+	if c.freeze {
+		c.vn.SetIntegral(in)
+		c.ve.SetIntegral(ie)
+	}
 
 	// Turn the accel into the heading frame, then tilt toward it. Nose down speeds up forward.
 	s, co := fmath.SinCos(yaw)

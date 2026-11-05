@@ -80,6 +80,7 @@ type Flight struct {
 	zSp      float32
 	xySp     fmath.Vec3
 	xyHold   bool
+	xyBrake  bool // PosHold is flying on the sticks or slowing down, so the setpoint follows the vehicle
 	xyLost   bool // PosHold lost its position, so the sticks wait for centre
 	stale    bool // no pilot input for a while, so the sticks count as centred
 	held     msg.ManualInput
@@ -590,26 +591,40 @@ func (f *Flight) lostPosition(roll, pitch float32, mode msg.FlightMode) (float32
 	return 0, 0
 }
 
+// brakeSpeed is the speed in m/s below which PosHold stops braking and holds the spot.
+const brakeSpeed = 0.1
+
 // holdPosition turns the roll and pitch stick angles into a speed and returns the tilt that holds that speed.
-// With the sticks centred it holds the current spot.
+// The setpoint follows the vehicle while it moves, so letting go brakes to a stop and holds that spot
+// rather than flying on to a setpoint left ahead.
 func (f *Flight) holdPosition(roll, pitch, dt float32) (float32, float32) {
 	pos := fmath.Vec3{X: f.pos.X, Y: f.pos.Y}
+	speed := fmath.Vec3{X: f.pos.VX, Y: f.pos.VY}
 	f.xyLost = false
 	if !f.xyHold {
 		f.xyHold = true
 		f.xySp = pos
+		f.xyBrake = false
 		f.horCtl.Reset()
 	}
 	yaw := f.att.Q.Yaw()
 	s, c := fmath.SinCos(yaw)
-	scale := f.cfg.Horizontal.MaxSpeed / f.cfg.Manual.MaxTilt
-	fwd, right := -pitch*scale, roll*scale
+	m := f.cfg.Manual.MaxTilt
+	scale := f.cfg.Horizontal.MaxSpeed
+	fwd := -fmath.Deadband(pitch/m, stickCentre) * scale
+	right := fmath.Deadband(roll/m, stickCentre) * scale
 	vel := fmath.Vec3{X: c*fwd - s*right, Y: s*fwd + c*right}
-	// Keep the setpoint close so letting go of the sticks stops quickly.
-	f.xySp = f.xySp.Add(vel.Scale(dt))
-	f.xySp.X = fmath.Clamp(f.xySp.X, pos.X-0.5, pos.X+0.5)
-	f.xySp.Y = fmath.Clamp(f.xySp.Y, pos.Y-0.5, pos.Y+0.5)
-	return f.horCtl.Update(f.xySp, pos, fmath.Vec3{X: f.pos.VX, Y: f.pos.VY}, vel, yaw, dt)
+	switch {
+	case fwd != 0 || right != 0:
+		f.xyBrake = true
+		f.xySp = pos
+	case f.xyBrake && speed.Norm() > brakeSpeed:
+		f.xySp = pos
+	default:
+		f.xyBrake = false
+	}
+	f.horCtl.Freeze(f.xyBrake)
+	return f.horCtl.Update(f.xySp, pos, speed, vel, yaw, dt)
 }
 
 func (f *Flight) updateLED() {
