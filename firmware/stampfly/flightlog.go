@@ -14,7 +14,7 @@ import (
 
 const (
 	logPeriod   = 100 * time.Millisecond
-	logEntries  = 600 // 1 minute at logPeriod
+	logEntries  = 600 // the last minute at logPeriod
 	logInterval = 10 * time.Second
 )
 
@@ -54,13 +54,28 @@ type logEntry struct {
 	landing     bool
 }
 
-// flightLog keeps the last armed flight in memory, so it can be read over USB after landing.
+// flightLog keeps the last minute of the last armed flight in a ring, so it can be read over USB after landing.
 // It is a global so the buffer is set aside at build time.
 var flog flightLog
 
 type flightLog struct {
 	entries [logEntries]logEntry
-	n       int
+	n       int // entries added since arming
+}
+
+func (l *flightLog) count() int { return min(l.n, logEntries) }
+
+// inOrder rotates the ring so the oldest entry comes first. Call it only while disarmed.
+func (l *flightLog) inOrder() {
+	if l.n < logEntries {
+		return
+	}
+	if k := l.n % logEntries; k != 0 {
+		reverse(l.entries[:k])
+		reverse(l.entries[k:])
+		reverse(l.entries[:])
+	}
+	l.n = logEntries
 }
 
 // rtcTail keeps the last part of a flight in RTC SLOW memory, which nothing writes at startup, so it
@@ -136,7 +151,8 @@ func (l *flightLog) run(f *flight.Flight) {
 			disarmed = time.Now()
 		case unsaved && time.Since(disarmed) >= saveDelay:
 			trace.inOrder()
-			err := store.save(slotFlight, l.entries[:l.n], trace.entries[:trace.count()], trace.trigAt, armed)
+			l.inOrder()
+			err := store.save(slotFlight, l.entries[:l.count()], trace.entries[:trace.count()], trace.trigAt, armed)
 			if err != nil {
 				println("save:", err.Error())
 			} else {
@@ -158,9 +174,6 @@ func (l *flightLog) run(f *flight.Flight) {
 }
 
 func (l *flightLog) add(f *flight.Flight, start time.Time) {
-	if l.n >= logEntries {
-		return
-	}
 	p := f.Position()
 	s := f.Status()
 	r, pt, y := f.Attitude().Q.Euler()
@@ -178,7 +191,8 @@ func (l *flightLog) add(f *flight.Flight, start time.Time) {
 	}
 	in := f.Input()
 	ri := f.RateIntegral()
-	l.entries[l.n] = logEntry{
+	e := &l.entries[l.n%logEntries]
+	*e = logEntry{
 		ms:         uint32(time.Since(start) / time.Millisecond),
 		x:          int16(p.X * 1000),
 		y:          int16(p.Y * 1000),
@@ -216,7 +230,7 @@ func (l *flightLog) add(f *flight.Flight, start time.Time) {
 		zValid:     p.ZValid,
 		landing:    s.Landing,
 	}
-	tail.entries[tail.next] = l.entries[l.n]
+	tail.entries[tail.next] = *e
 	tail.next = (tail.next + 1) % tailEntries
 	if tail.count < tailEntries {
 		tail.count++
@@ -225,9 +239,10 @@ func (l *flightLog) add(f *flight.Flight, start time.Time) {
 }
 
 func (l *flightLog) print() {
-	println("log start", l.n, "entries")
+	l.inOrder()
+	println("log start", l.count(), "entries")
 	printHeader()
-	for i := range l.n {
+	for i := range l.count() {
 		printEntry(&l.entries[i])
 	}
 	println("log end")

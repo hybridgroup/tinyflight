@@ -173,7 +173,12 @@ func (c *Commander) land(now msg.Time, f msg.Failsafe) {
 }
 
 // Disarm stops the motors, for example when the flight loop sees the vehicle has landed.
-func (c *Commander) Disarm() { c.disarm() }
+// Any failsafe stays visible, so it shows why a failsafe landing ended.
+func (c *Commander) Disarm() {
+	f := c.status.Failsafe
+	c.disarm()
+	c.status.Failsafe = f
+}
 
 func (c *Commander) disarm() {
 	c.status.Armed = false

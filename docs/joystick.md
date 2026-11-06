@@ -152,7 +152,7 @@ The flight log is only in firmware built with the `blackbox` tag. It needs `mach
 tinygo flash -scheduler=cores -tags blackbox -target m5stamp-fly ./firmware/stampfly
 ```
 
-The firmware logs up to the first minute of each flight. One second after you disarm, it saves the flight to flash, which keeps the last 5 flights even with the battery off. Flashing new firmware with `tinygo flash` erases the whole flash chip, so read any saved flights first. While disarmed it prints the latest saved flight over USB every 10 s, between `saved log start` and `saved log end`.
+The firmware logs the last minute of each flight, so a longer flight starts partway in. The `ms` column is still time since arming. One second after you disarm, it saves the flight to flash, which keeps the last 5 flights even with the battery off. Flashing new firmware with `tinygo flash` erases the whole flash chip, so read any saved flights first. While disarmed it prints the latest saved flight over USB every 10 s, between `saved log start` and `saved log end`.
 
 The last 11 s of a flight are also kept in memory that survives a reset, such as a reboot after a crash. They are saved to flash at the next start, and the printout says the flight is from before a reset.
 
