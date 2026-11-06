@@ -29,6 +29,7 @@ type harness struct {
 	batt msg.BatteryStatus
 	now  msg.Time
 	tilt float32
+	lost bool
 }
 
 func newHarness() *harness {
@@ -43,7 +44,7 @@ func (h *harness) step(dt msg.Time, stale bool) msg.VehicleStatus {
 	if !stale {
 		h.in.Time = h.now
 	}
-	return h.c.Update(State{Now: h.now, Input: &h.in, Tilt: h.tilt, Battery: &h.batt, Ready: true})
+	return h.c.Update(State{Now: h.now, Input: &h.in, Tilt: h.tilt, Battery: &h.batt, Ready: true, HeightLost: h.lost})
 }
 
 func TestArmNeedsRisingEdgeAndLowThrottle(t *testing.T) {
@@ -220,5 +221,22 @@ func TestInputRecovers(t *testing.T) {
 	}
 	if s := h.step(second/10, false); !s.Landing {
 		t.Error("Stabilize stopped landing when input came back")
+	}
+}
+
+func TestHeightLost(t *testing.T) {
+	h := armIn(msg.ModeStabilize)
+	h.lost = true
+	if s := h.step(1000, false); s.Landing {
+		t.Fatal("landing on lost height in Stabilize")
+	}
+	h = armIn(msg.ModePosHold)
+	h.lost = true
+	if s := h.step(1000, false); !s.Landing || s.Failsafe != msg.FailsafeHeightLost {
+		t.Fatalf("status %+v", s)
+	}
+	h.lost = false
+	if s := h.step(second, false); !s.Landing {
+		t.Fatal("stopped landing when the height came back")
 	}
 }

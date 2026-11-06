@@ -151,6 +151,7 @@ const (
 	FailsafeInputLost
 	FailsafeLowBattery
 	FailsafeTilt
+	FailsafeHeightLost
 )
 
 // String returns the failsafe name.
@@ -164,6 +165,8 @@ func (f Failsafe) String() string {
 		return "low battery"
 	case FailsafeTilt:
 		return "tilt"
+	case FailsafeHeightLost:
+		return "height lost"
 	}
 	return "unknown"
 }

@@ -23,6 +23,10 @@ type Config struct {
 	// StepGate is the most in m the range may jump between readings beyond the estimated movement
 	// before it counts as a change of surface. 0 disables.
 	StepGate float32
+	// FixTimeout is how long in s the height may go without an accepted reading before it is stale. 0 disables.
+	FixTimeout float32
+	// MaxPosSD caps the height standard deviation in m, so a far off reading cannot pass the gate after a long gap. 0 disables.
+	MaxPosSD float32
 }
 
 // Step detection settings. stepWindow is the longest gap in s between range readings that are
@@ -49,6 +53,7 @@ type Filter struct {
 	rangeRef    float32
 	rangeRefSet bool
 	rangeAge    float32
+	fixAge      float32
 
 	history [historyLen]float32 // height change from each Predict
 	histN   int
@@ -78,6 +83,7 @@ func (f *Filter) Reset() {
 	f.baroRefSet = false
 	f.rangeRefSet = false
 	f.rangeAge = f.cfg.RangeHold + 1
+	f.fixAge = f.cfg.FixTimeout + 1
 	f.histN = 0
 	f.lastValid = false
 	f.levelVar = f.cfg.RangeNoise * f.cfg.RangeNoise
@@ -98,6 +104,9 @@ func (f *Filter) Ground() float32 { return f.rangeRef - f.k.X[axis.Pos] }
 // RangeActive reports whether a recent range reading is driving the height.
 func (f *Filter) RangeActive() bool { return f.rangeAge <= f.cfg.RangeHold }
 
+// Fresh reports whether a baro or range reading was accepted within FixTimeout.
+func (f *Filter) Fresh() bool { return f.cfg.FixTimeout <= 0 || f.fixAge <= f.cfg.FixTimeout }
+
 // Predict moves the state forward using earth frame vertical accel in m/s² with gravity removed.
 func (f *Filter) Predict(accelZ, dt float32) {
 	noise := f.cfg.AccelNoise
@@ -106,11 +115,28 @@ func (f *Filter) Predict(accelZ, dt float32) {
 	}
 	before := f.k.X[axis.Pos]
 	f.k.Predict(accelZ, dt, noise, f.cfg.BiasNoise)
+	f.capPos()
 	f.rangeAge += dt
+	f.fixAge += dt
 	f.lastAge += dt
 	f.history[f.histN%historyLen] = f.k.X[axis.Pos] - before
 	f.histN++
 	f.lastDt = dt
+}
+
+// capPos scales the height row and column of P so its variance stays within MaxPosSD².
+// That is D P D with D diagonal, so P stays a valid covariance.
+func (f *Filter) capPos() {
+	m := f.cfg.MaxPosSD * f.cfg.MaxPosSD
+	p := &f.k.P
+	if m <= 0 || p[axis.Pos][axis.Pos] <= m {
+		return
+	}
+	s := fmath.Sqrt(m / p[axis.Pos][axis.Pos])
+	for i := range 3 {
+		p[axis.Pos][i] *= s
+		p[i][axis.Pos] *= s
+	}
 }
 
 // heightBefore returns where the current estimate puts the vehicle RangeDelay ago. It takes off the
@@ -174,6 +200,7 @@ func (f *Filter) UpdateRange(dist, cosTilt float32) bool {
 		return false
 	}
 	f.rangeAge = 0
+	f.fixAge = 0
 	return true
 }
 
@@ -205,7 +232,11 @@ func (f *Filter) checkStep(h float32) {
 
 // update is a Kalman correction for a direct height measurement z with standard deviation sd.
 func (f *Filter) update(z, sd float32) bool {
-	return f.k.Update(axis.Pos, z, sd, f.cfg.Gate)
+	if !f.k.Update(axis.Pos, z, sd, f.cfg.Gate) {
+		return false
+	}
+	f.fixAge = 0
+	return true
 }
 
 // BaroHeight returns the height in m of pressure pa above reference pressure ref, both in Pa, at tempC °C.

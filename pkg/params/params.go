@@ -94,6 +94,10 @@ func Default() Config {
 			RangeHold:        0.3,
 			BaroTrack:        0.02,
 			StepGate:         0.03,
+			// Sunlight blinded the ToF and the baro drifted meters, so the height ran on accel alone into the ceiling.
+			// See pkg/estimator/altitude/testdata/sunlight.txt
+			FixTimeout: 1,
+			MaxPosSD:   0.5,
 		},
 		HorEst: horest.Config{
 			AccelNoise: 0.5,

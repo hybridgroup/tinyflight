@@ -22,7 +22,7 @@ export const STATE = {
 };
 
 export const MODES = ['Acro', 'Stabilize', 'AltHold', 'PosHold'];
-export const FAILSAFES = ['none', 'input lost', 'low battery', 'tilt'];
+export const FAILSAFES = ['none', 'input lost', 'low battery', 'tilt', 'height lost'];
 
 export class Sim extends EventTarget {
   constructor() {

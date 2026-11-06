@@ -28,6 +28,8 @@ type State struct {
 	Tilt    float32 // rad
 	Battery *msg.BatteryStatus
 	Ready   bool // sensors are calibrated
+	// HeightLost is true when the vehicle is flying with no recent height reading.
+	HeightLost bool
 }
 
 // Commander tracks the arm state, flight mode and failsafes.
@@ -109,6 +111,8 @@ func (c *Commander) Update(s State) msg.VehicleStatus {
 			c.land(s.Now, msg.FailsafeInputLost)
 		case c.batteryLow(s):
 			c.land(s.Now, msg.FailsafeLowBattery)
+		case holdsHeight(st.Mode) && s.HeightLost:
+			c.land(s.Now, msg.FailsafeHeightLost)
 		default:
 			st.Mode = in.Mode
 		}

@@ -106,6 +106,7 @@ The joystick then scans the channels until it finds the drone. Tinyflight keeps 
 | Signal lost for 2 s in AltHold or PosHold, or 0.5 s in Stabilize or Acro | Level out and descend, then disarm |
 | Signal back for 0.5 s during that landing, in AltHold or PosHold | Stop landing and hold the height it got to |
 | Battery low for 2 s | Level out and descend, then disarm |
+| No height reading accepted for 1 s in AltHold or PosHold, such as when sunlight blinds the ToF and the baro is far off | Level out and descend, then disarm |
 | Tilt past about 70° in any mode but Acro | Stop motors at once |
 
 In a crowded place such as a conference, Wi-Fi can drop many packets. Fly in AltHold or PosHold there, since they ride out gaps of up to 2 s, and move to a quieter channel. See [Radio channel](../README.md#radio-channel).

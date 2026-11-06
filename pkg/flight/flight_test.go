@@ -188,6 +188,45 @@ func TestInputLossLands(t *testing.T) {
 	}
 }
 
+// sunlight blinds the range and puts the baro meters off, so the filter rejects it, as in
+// testdata/sunlight.txt of the altitude package. An accel bias then walks the height away.
+// It returns the highest the quad got above where it started and whether it landed for lost height.
+func sunlight(w *world) (climb float32, lost bool) {
+	w.takeoffIn(msg.ModePosHold)
+	start := -w.quad.Pos.Z
+	w.quad.RangeLost = true
+	w.quad.BaroOffset = 5
+	w.quad.P.AccelBias.Z = 0.5
+	var top float32
+	w.run(w.cfg.AltEst.FixTimeout+w.cfg.Commander.LandTime+1, func() {
+		w.quad.BaroOffset += 3 / w.cfg.LoopHz
+		top = fmath.Max(top, -w.quad.Pos.Z)
+		lost = lost || w.f.Status().Failsafe == msg.FailsafeHeightLost
+	})
+	return top - start, lost
+}
+
+func TestHeightLostLands(t *testing.T) {
+	cfg := params.Default()
+	cfg.AltEst.FixTimeout = 0
+	old, _ := sunlight(newWorldConfig(t, cfg))
+	w := newWorld(t)
+	climb, lost := sunlight(w)
+	t.Logf("climbed %.2f m without the fix, %.2f m with it", old, climb)
+	if old < 5 {
+		t.Errorf("test no longer climbs without the fix, %v m", old)
+	}
+	if !lost {
+		t.Error("no height lost landing")
+	}
+	if climb > 1 {
+		t.Errorf("climbed %v m", climb)
+	}
+	if w.f.Status().Armed || !w.quad.OnGround() {
+		t.Errorf("status %+v, %v m up", w.f.Status(), -w.quad.Pos.Z)
+	}
+}
+
 func TestStabilizeThrottle(t *testing.T) {
 	w := newWorld(t)
 	w.arm(msg.ModeStabilize)

@@ -12,7 +12,7 @@ Flight control firmware written in Go and built with [TinyGo](https://tinygo.org
 
 - Flight modes: Acrobatic, Stabilized, Altitude Hold, and Position Hold
 - Fly with the M5 Atom Joystick over ESP-NOW, using its stock firmware
-- Arming checks, plus failsafes for lost pilot input, low battery, crashes and IMU failure
+- Arming checks, plus failsafes for lost pilot input, low battery, lost height, crashes and IMU failure
 - Pure Go flight stack with full set of tests, including closed loop tests on a simulated quad
 - tinyflightsim, a browser flight sim that runs the real firmware as WebAssembly, flown with an on-screen Atom Joystick
 - Live images from an optional AMG8833 thermal camera, sent over ESP-NOW and shown in the browser
