@@ -168,3 +168,31 @@ func TestMaxPosSD(t *testing.T) {
 		t.Errorf("took a baro reading 6 m off, height now %v m", f.Z())
 	}
 }
+
+// TestBaroClip steps the baro 1 m while at rest. The clip must slow how fast the height follows in the first 0.5 s.
+func TestBaroClip(t *testing.T) {
+	follow := func(clip float32) float32 {
+		cfg := testConfig()
+		cfg.MaxPosSD, cfg.BaroClip = 0.5, clip
+		f := New(cfg)
+		for i := range 350 {
+			alt := float32(100)
+			if i >= 300 {
+				alt = 101
+			}
+			if i%2 == 0 {
+				f.UpdateBaro(alt)
+			}
+			f.Predict(0, 0.01)
+		}
+		return -f.Z()
+	}
+	free, clipped := follow(0), follow(0.25)
+	t.Logf("height after 0.5 s, %.2f m free, %.2f m clipped", free, clipped)
+	if free < 0.5 {
+		t.Errorf("did not follow the baro without the clip, %v m", free)
+	}
+	if clipped > free/2 {
+		t.Errorf("clipped height %v m, free %v m", clipped, free)
+	}
+}

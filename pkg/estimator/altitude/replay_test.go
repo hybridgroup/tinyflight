@@ -79,7 +79,7 @@ func TestSunlightReplay(t *testing.T) {
 	}
 
 	old := params.Default().AltEst
-	old.FixTimeout, old.MaxPosSD = 0, 0
+	old.FixTimeout, old.MaxPosSD, old.BaroClip = 0, 0, 0
 	_, oldJump := replay(steps, old)
 	t.Logf("without the fix one reading moves the height %.2f m", oldJump)
 	if oldJump < 3 {
@@ -91,7 +91,7 @@ func TestSunlightReplay(t *testing.T) {
 	if stale < 3.4 || stale > 4.6 {
 		t.Errorf("height went stale at %v s, want soon after the range was lost at 3.38 s", stale)
 	}
-	if jump > 1 {
+	if jump > 0.2 {
 		t.Errorf("one reading moved the height %v m", jump)
 	}
 }
