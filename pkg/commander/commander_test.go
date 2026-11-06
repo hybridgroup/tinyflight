@@ -240,3 +240,20 @@ func TestHeightLost(t *testing.T) {
 		t.Fatal("stopped landing when the height came back")
 	}
 }
+
+func TestDisarmKeepsFailsafe(t *testing.T) {
+	h := armIn(msg.ModePosHold)
+	h.lost = true
+	h.step(1000, false)
+	h.c.Disarm()
+	if s := h.c.Status(); s.Armed || s.Failsafe != msg.FailsafeHeightLost {
+		t.Fatalf("status after landing %+v", s)
+	}
+	h.lost = false
+	h.in.Arm = false
+	h.step(1000, false)
+	h.in.Arm = true
+	if s := h.step(1000, false); !s.Armed || s.Failsafe != msg.FailsafeNone {
+		t.Fatalf("status after arming again %+v", s)
+	}
+}

@@ -222,7 +222,7 @@ func TestHeightLostLands(t *testing.T) {
 	if climb > 1 {
 		t.Errorf("climbed %v m", climb)
 	}
-	if w.f.Status().Armed || !w.quad.OnGround() {
+	if s := w.f.Status(); s.Armed || s.Failsafe != msg.FailsafeHeightLost || !w.quad.OnGround() {
 		t.Errorf("status %+v, %v m up", w.f.Status(), -w.quad.Pos.Z)
 	}
 }
