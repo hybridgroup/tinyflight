@@ -275,11 +275,12 @@ func (f *Flight) Step(now msg.Time) {
 
 	wasArmed := f.status.Armed
 	cs := commander.State{
-		Now:     now,
-		Input:   &f.input,
-		Tilt:    f.att.Q.Tilt(),
-		Battery: &f.batt,
-		Ready:   f.imu.Calibrated(),
+		Now:        now,
+		Input:      &f.input,
+		Tilt:       f.att.Q.Tilt(),
+		Battery:    &f.batt,
+		Ready:      f.imu.Calibrated(),
+		HeightLost: f.airborne && !f.pos.ZValid,
 	}
 	f.status = f.cmd.Update(cs)
 	f.stale = f.cmd.Stale(cs)
@@ -363,6 +364,9 @@ func (f *Flight) estimate(dt float32) {
 	f.pos.VZ = f.altEst.VZ()
 	f.pos.AccBias = f.altEst.Bias()
 	f.pos.GValid = f.altEst.RangeActive()
+	if !f.altEst.Fresh() {
+		f.pos.ZValid = false
+	}
 
 	f.horEst.Predict(fmath.Vec3{X: accel.X, Y: accel.Y}, dt)
 	if f.flowNew {

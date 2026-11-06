@@ -27,6 +27,7 @@ type Params struct {
 	BaroNoise  float32 // Pa
 	RangeNoise float32 // m
 	GyroBias   fmath.Vec3
+	AccelBias  fmath.Vec3 // m/s² in body axes
 	SeaLevelPa float32
 	GroundAlt  float32 // m above sea level
 	RangeMax   float32 // m
@@ -80,6 +81,10 @@ type Quad struct {
 	IMUFail bool
 	// FlowLost makes the flow sensor report a surface it cannot track.
 	FlowLost bool
+	// RangeLost makes the range sensor report no reading, as the ToF did in bright sunlight.
+	RangeLost bool
+	// BaroOffset in m is added to the height the baro reports.
+	BaroOffset float32
 	// FlowCloseValid keeps flow quality good below FlowMin, as the PMW3901 did on the bench when set down.
 	FlowCloseValid bool
 	// Terrain gives the height in m of the surface at x, y above the floor. Nil is a flat floor.
@@ -208,7 +213,7 @@ func (s *Quad) ReadIMU(out *msg.IMUSample) error {
 		return errIMU
 	}
 	f := s.Q.RotateInv(s.accel.Sub(fmath.Vec3{Z: fmath.Gravity}))
-	out.Accel = f.Add(s.noiseVec(s.P.AccelNoise))
+	out.Accel = f.Add(s.P.AccelBias).Add(s.noiseVec(s.P.AccelNoise))
 	out.Gyro = s.Omega.Add(s.P.GyroBias).Add(s.noiseVec(s.P.GyroNoise))
 	out.Temperature = 25
 	return nil
@@ -219,7 +224,7 @@ func (s *Quad) ReadBaro(out *msg.BaroSample) error {
 	// Inverse of altitude.BaroHeight, from sea level.
 	const temp = 25
 	scale := 287.05 * (temp + 273.15) / fmath.Gravity
-	h := s.P.GroundAlt - s.Pos.Z
+	h := s.P.GroundAlt - s.Pos.Z + s.BaroOffset
 	out.Pressure = s.P.SeaLevelPa*(2*scale-h)/(2*scale+h) + s.noise(s.P.BaroNoise)
 	out.Temperature = temp
 	return nil
@@ -229,7 +234,7 @@ func (s *Quad) ReadBaro(out *msg.BaroSample) error {
 func (s *Quad) ReadRange(out *msg.RangeSample) error {
 	c := s.Q.Down().Z
 	out.Valid = false
-	if c < 0.5 {
+	if c < 0.5 || s.RangeLost {
 		return nil
 	}
 	d := (-s.heightBefore()+0.01)/c + s.noise(s.P.RangeNoise)

@@ -126,3 +126,45 @@ func TestRecoversFromKnock(t *testing.T) {
 		t.Error("did not recover from the knock")
 	}
 }
+
+func TestFixTimeout(t *testing.T) {
+	cfg := testConfig()
+	cfg.FixTimeout = 1
+	f := New(cfg)
+	if f.Fresh() {
+		t.Error("fresh before any reading")
+	}
+	f.UpdateBaro(100)
+	for range 90 {
+		f.Predict(0, 0.01)
+	}
+	if !f.Fresh() {
+		t.Error("stale 0.9 s after a reading")
+	}
+	for range 20 {
+		f.Predict(0, 0.01)
+	}
+	if f.Fresh() {
+		t.Error("still fresh 1.1 s after a reading")
+	}
+	if !f.UpdateBaro(100) || !f.Fresh() {
+		t.Error("an accepted reading did not make it fresh")
+	}
+}
+
+// TestMaxPosSD checks a long gap cannot widen the gate enough to take a baro reading meters off.
+func TestMaxPosSD(t *testing.T) {
+	cfg := testConfig()
+	cfg.MaxPosSD = 0.5
+	f := New(cfg)
+	f.UpdateBaro(100)
+	for range 500 {
+		f.Predict(0, 0.01)
+	}
+	if sd := fmath.Sqrt(f.k.P[0][0]); sd > 0.5001 {
+		t.Errorf("height sd %v m", sd)
+	}
+	if f.UpdateBaro(106) {
+		t.Errorf("took a baro reading 6 m off, height now %v m", f.Z())
+	}
+}
