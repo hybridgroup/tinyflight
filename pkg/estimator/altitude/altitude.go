@@ -27,6 +27,8 @@ type Config struct {
 	FixTimeout float32
 	// MaxPosSD caps the height standard deviation in m, so a far off reading cannot pass the gate after a long gap. 0 disables.
 	MaxPosSD float32
+	// BaroClip limits how far one baro reading can pull the height, in standard deviations of its expected error. 0 disables.
+	BaroClip float32
 }
 
 // Step detection settings. stepWindow is the longest gap in s between range readings that are
@@ -168,7 +170,20 @@ func (f *Filter) UpdateBaro(alt float32) bool {
 		f.baroRef += f.cfg.BaroTrack * (alt + f.k.X[axis.Pos] - f.baroRef)
 		return false
 	}
-	return f.update(f.baroRef-alt, f.cfg.BaroNoise)
+	innov := f.baroRef - alt - f.k.X[axis.Pos]
+	sd := f.cfg.BaroNoise
+	s := fmath.Sqrt(f.k.P[axis.Pos][axis.Pos] + sd*sd)
+	if g := f.cfg.Gate; g > 0 && fmath.Abs(innov) > g*s {
+		return false
+	}
+	if c := f.cfg.BaroClip; c > 0 {
+		// Huber style clipping, so a drifting baro pulls the height slowly. Masreliez and Martin,
+		// IEEE Trans. Automatic Control 22(3), 1977, "Robust Bayesian estimation for the linear model and robustifying the Kalman filter".
+		innov = fmath.Clamp(innov, -c*s, c*s)
+	}
+	f.k.Correct(axis.Pos, innov, sd, 0)
+	f.fixAge = 0
+	return true
 }
 
 // UpdateRange corrects with a downward range reading in m and the cosine of the vehicle tilt.
@@ -228,15 +243,6 @@ func (f *Filter) checkStep(h float32) {
 		f.levelVar += stepNoise * (c*c - f.levelVar)
 	}
 	f.lastH, f.lastAge, f.lastValid = h, 0, true
-}
-
-// update is a Kalman correction for a direct height measurement z with standard deviation sd.
-func (f *Filter) update(z, sd float32) bool {
-	if !f.k.Update(axis.Pos, z, sd, f.cfg.Gate) {
-		return false
-	}
-	f.fixAge = 0
-	return true
 }
 
 // BaroHeight returns the height in m of pressure pa above reference pressure ref, both in Pa, at tempC °C.

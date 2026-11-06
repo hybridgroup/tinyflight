@@ -98,6 +98,8 @@ func Default() Config {
 			// See pkg/estimator/altitude/testdata/sunlight.txt
 			FixTimeout: 1,
 			MaxPosSD:   0.5,
+			// The baro moved the height 1 m in 1.4 s on a blackbox flight while the ToF was out.
+			BaroClip: 0.25,
 		},
 		HorEst: horest.Config{
 			AccelNoise: 0.5,

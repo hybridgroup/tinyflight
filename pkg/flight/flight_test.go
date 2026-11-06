@@ -227,6 +227,56 @@ func TestHeightLostLands(t *testing.T) {
 	}
 }
 
+// baroDrift blinds the range for 2.2 s while the baro drifts up 1 m in 1.4 s, as in blackbox flight 8.
+// It returns how far the quad moved from its height.
+func baroDrift(w *world) float32 {
+	w.takeoffIn(msg.ModePosHold)
+	start := -w.quad.Pos.Z
+	n := 0
+	var worst float32
+	w.run(4, func() {
+		n++
+		w.quad.RangeLost = float32(n) < 2.2*w.cfg.LoopHz
+		if float32(n) <= 1.4*w.cfg.LoopHz {
+			w.quad.BaroOffset += 1 / (1.4 * w.cfg.LoopHz)
+		}
+		worst = fmath.Max(worst, fmath.Abs(-w.quad.Pos.Z-start))
+	})
+	return worst
+}
+
+func TestBaroDrift(t *testing.T) {
+	cfg := params.Default()
+	cfg.AltEst.BaroClip = 0
+	old := baroDrift(newWorldConfig(t, cfg))
+	moved := baroDrift(newWorld(t))
+	t.Logf("moved %.2f m without the clip, %.2f m with it", old, moved)
+	if old < 0.8 {
+		t.Errorf("test no longer moves without the clip, %v m", old)
+	}
+	if moved > 0.45 {
+		t.Errorf("moved %v m", moved)
+	}
+}
+
+// TestBaroOnlyHold flies on the baro alone with an accel bias change like those seen in the blackbox logs.
+func TestBaroOnlyHold(t *testing.T) {
+	w := newWorld(t)
+	w.takeoffIn(msg.ModePosHold)
+	start := -w.quad.Pos.Z
+	w.quad.RangeLost = true
+	w.quad.P.AccelBias.Z = 0.05
+	var worst float32
+	w.run(10, func() { worst = fmath.Max(worst, fmath.Abs(-w.quad.Pos.Z-start)) })
+	t.Logf("moved %.2f m in 10 s", worst)
+	if worst > 0.4 {
+		t.Errorf("moved %v m", worst)
+	}
+	if s := w.f.Status(); s.Landing || s.Failsafe != msg.FailsafeNone {
+		t.Errorf("status %+v", s)
+	}
+}
+
 func TestStabilizeThrottle(t *testing.T) {
 	w := newWorld(t)
 	w.arm(msg.ModeStabilize)
