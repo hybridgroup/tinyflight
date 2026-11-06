@@ -4,13 +4,27 @@
 
 [![CI](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml) [![coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/hybridgroup/tinyflight/badges/coverage.json)](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml)
 
-Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1).
+Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1) and is 100% protocol compatible with the [M5Stack Atom Joystick](https://docs.m5stack.com/en/app/Atom_JoyStick).
 
 ![m5stamp fly](./images/m5stampfly.gif)
 
+## Quick install
+
+Just want to run TinyFlight on your drone right now? You can download the pre-built BIN file from our [releases](https://github.com/hybridgroup/tinyflight/releases), and flash it on your m5-stampfly using [espflasher](https://github.com/tinygo-org/espflasher) or esptool.
+
+```
+espflasher -port /dev/ttyACM0 stampfly.bin
+```
+
+or
+
+```
+esptool --port /dev/ttyACM0 write-flash 0x0000 stampfly.bin
+```
+
 ## Features
 
-- Flight modes: Acrobatic, Stabilized, Altitude Hold, and Position Hold
+- Flight modes: Acrobatic, Stabilized, Altitude Hold, and <b>Position Hold</b>
 - Fly with the M5 Atom Joystick over ESP-NOW, using its stock firmware
 - Arming checks, plus failsafes for lost pilot input, low battery, lost height, crashes and IMU failure
 - Pure Go flight stack with full set of tests, including closed loop tests on a simulated quad
@@ -31,7 +45,7 @@ See [docs/architecture.md](docs/architecture.md) for architectural details. See 
 
 ## tinyflightsim
 
-Fly the real firmware in a web browser before you fly the drone. See [Flying in the browser sim](#flying-in-the-browser-sim).
+Fly the real firmware in a web browser before you fly the drone. See [docs/simulator.md](docs/simulator.md).
 
 ![tinyflightsim](images/tinyflightsim.png)
 
@@ -59,15 +73,6 @@ go test ./...
 ```
 
 This includes closed loop tests that fly a simulated quad.
-
-## Flying in the browser sim
-
-```
-cd tools/tinyflightsim
-go run .
-```
-
-Then open http://localhost:8080. The server builds `firmware/stampfly` with TinyGo to WebAssembly and runs it against a physics model of the StampFly. See [docs/simulator.md](docs/simulator.md).
 
 ## Building for the StampFly
 
