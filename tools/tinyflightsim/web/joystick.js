@@ -1,5 +1,6 @@
 // An on-screen M5 Atom Joystick running the stock StampFlyController firmware.
 // Controls follow docs/joystick.md and the packets follow docs/protocol.md.
+import {Gamepad} from './gamepad.js';
 
 const PACKET_MS = 10; // about 100 packets per second
 const ARM_PACKETS = 20; // the arm byte stays 1 for about 20 packets after a press
@@ -25,8 +26,9 @@ export function readTelemetry(p) {
 }
 
 export class Joystick {
-  constructor(root, sim, mac) {
+  constructor(root, sim, mac, gamepad = new Gamepad()) {
     this.sim = sim;
+    this.gamepad = gamepad;
     this.mac = mac;
     this.screen = 'setup';
     this.rate = false; // Sport when true, Stable when false
@@ -35,7 +37,6 @@ export class Joystick {
     this.sticks = {yaw: 0, throttle: 0, roll: 0, pitch: 0};
     this.keys = new Set();
     this.keyThrottle = 0;
-    this.pad = null;
     this.telemetry = null;
     this.telemetrySeq = -1;
     this.telemetryAt = 0;
@@ -200,20 +201,18 @@ export class Joystick {
     s.pitch = -forward;
   }
 
-  // readPad uses the first gamepad in the standard layout: A is the screen, LB and RB the side buttons.
+  // readPad reads the first gamepad or joystick through its mapping. See gamepad.js.
   readPad() {
-    const pad = navigator.getGamepads?.().find((p) => p && p.mapping === 'standard');
-    if (!pad) {
+    const p = this.gamepad.read();
+    if (!p) {
       return null;
     }
-    const dz = (v) => (Math.abs(v) < 0.08 ? 0 : v);
-    const pressed = pad.buttons.map((b) => b.pressed);
-    const was = this.padButtons || [];
-    if (pressed[0] && !was[0]) this.pressScreen();
-    if (pressed[4] && !was[4]) this.pressLeft();
-    if (pressed[5] && !was[5]) this.pressRight();
-    this.padButtons = pressed;
-    return {yaw: dz(pad.axes[0]), throttle: -dz(pad.axes[1]), roll: dz(pad.axes[2]), forward: -dz(pad.axes[3])};
+    const was = this.padButtons ?? {};
+    if (p.screen && !was.screen) this.pressScreen();
+    if (p.left && !was.left) this.pressLeft();
+    if (p.right && !was.right) this.pressRight();
+    this.padButtons = p;
+    return {yaw: p.yaw, throttle: p.throttle, roll: p.roll, forward: p.pitch};
   }
 
   packet() {
