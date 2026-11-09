@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml) [![coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/hybridgroup/tinyflight/badges/coverage.json)](https://github.com/hybridgroup/tinyflight/actions/workflows/ci.yml)
 
-Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://docs.m5stack.com/en/app/StampFly_v1.1) and is 100% protocol compatible with the [M5Stack Atom Joystick](https://docs.m5stack.com/en/app/Atom_JoyStick).
+Flight control firmware written in Go and built with [TinyGo](https://tinygo.org). Supports the [M5Stack StampFly](https://shop.m5stack.com/products/m5stamp-fly-v1-1-with-m5stamps3a) and is 100% protocol compatible with the [M5Stack Atom Joystick](https://shop.m5stack.com/products/m5atom-joystick-with-m5atoms3r-v1-1).
 
 ![m5stamp fly](./images/m5stampfly.gif)
 
@@ -22,7 +22,13 @@ or
 esptool --port /dev/ttyACM0 write-flash 0x0000 stampfly.bin
 ```
 
-## Features
+## tinyflightsim
+
+Fly the real firmware in a web browser before you fly the real drone. Try it at https://tinyflight.app/ or see [docs/simulator.md](docs/simulator.md).
+
+![tinyflightsim](images/tinyflightsim.png)
+
+## Tinyflight Features
 
 - Flight modes: Acrobatic, Stabilized, Altitude Hold, and <b>Position Hold</b>
 - Fly with the M5 Atom Joystick over ESP-NOW, using its stock firmware
@@ -33,7 +39,7 @@ esptool --port /dev/ttyACM0 write-flash 0x0000 stampfly.bin
 - Bench control with text lines over USB serial
 - Optional blackbox flight log saved to flash
 
-## How it works
+## How Tinyflight works
 
 - 400 Hz flight loop with no heap memory allocations after startup
 - Supports multicore on the ESP32-S3, where the flight loop gets a core to itself
@@ -41,13 +47,15 @@ esptool --port /dev/ttyACM0 write-flash 0x0000 stampfly.bin
 - Height and position estimates from Kalman filters using the barometer, ToF distance sensor and optical flow
 - Cascaded position, attitude and rate controllers
 
-See [docs/architecture.md](docs/architecture.md) for architectural details. See [docs/protocol.md](docs/protocol.md) for the radio protocol used with the M5 Atom Joystick. See [docs/joystick.md](docs/joystick.md) for how to fly with it. See [docs/simulator.md](docs/simulator.md) for the browser sim. See [docs/camera.md](docs/camera.md) for streaming images from an optional thermal camera.
+Architectural details are documented here in [docs/architecture.md](docs/architecture.md).
 
-## tinyflightsim
+The radio protocol used with the M5 Atom Joystick is documented in [docs/protocol.md](docs/protocol.md).
 
-Fly the real firmware in a web browser before you fly the drone. Try it at https://tinyflight.app/ or see [docs/simulator.md](docs/simulator.md).
+How to use the joystick, see [docs/joystick.md](docs/joystick.md).
 
-![tinyflightsim](images/tinyflightsim.png)
+Learn about the browser sim in [docs/simulator.md](docs/simulator.md).
+
+For streaming images from an optional thermal camera, see [docs/camera.md](docs/camera.md).
 
 ## Cameras
 
