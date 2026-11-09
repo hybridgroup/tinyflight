@@ -30,7 +30,7 @@ func TestClimbPastRange(t *testing.T) {
 	w := New(stampfly.Config())
 	w.Hardware.Range = shortRange{w.Hardware.Range, 1.2}
 	r := &rig{t: t, w: w, f: flight.New(w.Hardware, stampfly.Config())}
-	r.s.autoAlt, r.s.rate = true, true
+	r.s.autoAlt = true
 	r.arm()
 	r.s.throttle = 1
 	r.fly(2, nil)

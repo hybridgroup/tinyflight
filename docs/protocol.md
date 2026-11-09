@@ -64,7 +64,7 @@ This is done by `pkg/input/atom.go`.
 
 **Arming:** each press of the arm button arms the drone if it is disarmed and disarms it if it is armed. The commander still runs its own arming checks.
 
-**Modes:** control mode 1 gives Acro, otherwise Stabilize. Altitude mode 4 gives AltHold with control mode 0, and PosHold with control mode 1. On the joystick the Mode button toggles altitude mode and the Option button toggles control mode, from `check_alt_mode_change` and `check_control_mode_change` in [StampFlyController](https://github.com/m5stack/Atom-JoyStick/blob/main/examples/StampFlyController/src/main.cpp).
+**Modes:** control mode 1 gives Acro, otherwise Stabilize. Altitude mode 4 gives PosHold with control mode 0, and AltHold with control mode 1. On the joystick the Mode button toggles altitude mode and the Option button toggles control mode, from `check_alt_mode_change` and `check_control_mode_change` in [StampFlyController](https://github.com/m5stack/Atom-JoyStick/blob/main/examples/StampFlyController/src/main.cpp).
 
 ## Telemetry packet, drone to joystick, 120 bytes
 

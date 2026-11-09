@@ -20,7 +20,7 @@ type linkLog struct {
 // with packets passed by pass, holding the right stick at pitch.
 func hoverThrough(t *testing.T, posHold bool, pitch float32, d float32, pass func() bool) (*rig, linkLog) {
 	r := newRig(t)
-	r.s.autoAlt, r.s.rate = true, posHold
+	r.s.autoAlt, r.s.rate = true, !posHold
 	r.arm()
 	r.s.throttle = 1
 	r.fly(2, nil)

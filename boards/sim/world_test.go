@@ -87,7 +87,7 @@ func (r *rig) arm() {
 
 func TestAltHoldHover(t *testing.T) {
 	r := newRig(t)
-	r.s.autoAlt = true
+	r.s.autoAlt, r.s.rate = true, true
 	r.arm()
 	if r.f.Status().Mode != msg.ModeAltHold {
 		t.Fatalf("mode %v", r.f.Status().Mode)
@@ -139,7 +139,7 @@ func TestBadPacketsIgnored(t *testing.T) {
 
 func TestSignalLost(t *testing.T) {
 	r := newRig(t)
-	r.s.autoAlt = true
+	r.s.autoAlt, r.s.rate = true, true
 	r.arm()
 	r.s.throttle = 1
 	r.fly(1, nil)
@@ -154,7 +154,7 @@ func TestSignalLost(t *testing.T) {
 // A drone disarmed in the air must fall flat and arm again on the ground.
 func TestRearmAfterDrop(t *testing.T) {
 	r := newRig(t)
-	r.s.autoAlt = true
+	r.s.autoAlt, r.s.rate = true, true
 	r.arm()
 	r.s.throttle = 1
 	r.fly(1.5, nil)
