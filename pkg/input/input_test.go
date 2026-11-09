@@ -41,12 +41,12 @@ func TestAtomDecode(t *testing.T) {
 		t.Errorf("got %+v", in)
 	}
 	a.Decode(packet(0, 0.1, 0, 0, 0, 0, 4), 8, &in)
-	if in.Mode != msg.ModeAltHold || in.Throttle != 0 || in.Climb != 0 {
-		t.Errorf("althold or deadband wrong %+v", in)
+	if in.Mode != msg.ModePosHold || in.Throttle != 0 || in.Climb != 0 {
+		t.Errorf("poshold or deadband wrong %+v", in)
 	}
 	a.Decode(packet(0, 0, 0, 0, 0, 1, 4), 8, &in)
-	if in.Mode != msg.ModePosHold {
-		t.Errorf("rate with altitude mode gave %v, want poshold", in.Mode)
+	if in.Mode != msg.ModeAltHold {
+		t.Errorf("rate with altitude mode gave %v, want althold", in.Mode)
 	}
 	a.Decode(packet(0, 0, 0, 0, 0, 1, 5), 9, &in)
 	if in.Mode != msg.ModeAcro {

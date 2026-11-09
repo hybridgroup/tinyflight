@@ -65,10 +65,10 @@ func (a *AtomJoystick) Decode(data []byte, now msg.Time, out *msg.ManualInput) e
 	rate := data[21] == atomRateControl
 	switch {
 	case data[22] == atomAutoAlt && rate:
-		// Rate control with altitude hold has no use of its own, so it gives PosHold.
-		out.Mode = msg.ModePosHold
-	case data[22] == atomAutoAlt:
+		// Rate control with altitude hold has no use of its own, so it gives AltHold.
 		out.Mode = msg.ModeAltHold
+	case data[22] == atomAutoAlt:
+		out.Mode = msg.ModePosHold
 	case rate:
 		out.Mode = msg.ModeAcro
 	default:

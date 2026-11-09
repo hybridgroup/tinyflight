@@ -41,7 +41,7 @@ func flyOver(t *testing.T, tc terrainCase, extraMass float32) flightLog {
 	if tc.noise > 0 {
 		r.w.Quad.P.RangeNoise = tc.noise
 	}
-	r.s.autoAlt, r.s.rate = true, true
+	r.s.autoAlt = true
 	var l flightLog
 	watch := func() {
 		s := r.f.Status()

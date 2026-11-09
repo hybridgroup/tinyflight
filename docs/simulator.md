@@ -59,7 +59,7 @@ A first flight:
 
 1. Wait for the LED on the drone to turn from blue to green. The gyro is calibrating.
 2. Press Space to go to the running screen, and Space again to arm. The LED turns red.
-3. Hold W to climb in AltHold. Let go and it holds the height.
+3. Hold W to climb in PosHold. Let go and it holds the height and its spot.
 4. Fly with the arrow keys. Hold S to come down. It disarms by itself 2 s after landing.
 
 The **Camera** menu has a chase view, a pilot view from where you would stand, and an orbit view you can drag. The orange ring shows where the firmware thinks the drone is. **Pause** and **Speed** stop or slow down simulated time. **Console** shows what the firmware prints.

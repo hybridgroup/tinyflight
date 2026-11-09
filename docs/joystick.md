@@ -16,7 +16,7 @@ The joystick firmware has two screens. The buttons do different things on each.
 | Button | Setup screen | Running screen |
 |---|---|---|
 | Screen, press the AtomS3 display | Go to the running screen | Arm or disarm. Each press toggles. |
-| Left button | Toggle between angle (Stabilize) and rate (Acro) | Go back to the setup screen. If armed, this also disarms. |
+| Left button | Toggle between angle and rate control. See [Modes](#modes). | Go back to the setup screen. If armed, this also disarms. |
 | Right button | Toggle altitude mode, which gives AltHold or PosHold | Nothing |
 | Stick presses | Nothing | Nothing |
 
@@ -44,12 +44,12 @@ There is a 20% deadband around centre, the same as the stock drone firmware.
 |---|---|
 | Stable and Manual | Stabilize |
 | Sport and Manual | Acro |
-| Stable and Auto | AltHold |
-| Sport and Auto | PosHold |
+| Stable and Auto | PosHold |
+| Sport and Auto | AltHold |
 
 The left tile is the control mode, Stable in blue for angle or Sport in yellow for rate. The right tile is the altitude mode, Manual in pink for off or Auto in green for on.
 
-Altitude mode is on at power on, so press the right button once on the setup screen to fly Stabilize. The right tile then shows Manual.
+Altitude mode is on at power on, so the drone starts in PosHold. Press the left button once on the setup screen to fly AltHold, or the right button once to fly Stabilize.
 
 PosHold holds the spot over the ground and needs a textured surface below, between 8 cm and about 2 m. Elsewhere it flies like AltHold. If it loses its spot while you hold the right stick, for example over a deep hole, it levels out and coasts. Centre the stick to steer again. See [architecture.md](architecture.md#flight-modes).
 
