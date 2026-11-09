@@ -159,3 +159,33 @@ func TestFlyOverRough(t *testing.T) {
 		{name: "boulders", terrain: physics.Rough{Cell: 0.5, Max: 0.4, Seed: 3}.Height, to: 3},
 	})
 }
+
+func TestSetTerrain(t *testing.T) {
+	w := New(stampfly.Config())
+	w.SetTerrain([]float32{0, 0, 0.5, 2, 1, 0.3, 0.6})
+	if w.Quad.Terrain == nil || w.Quad.Terrain(0.6, 0.1) != 0.6 || w.Quad.Terrain(-0.1, 0.1) != 0 {
+		t.Fatal("terrain not set from the record")
+	}
+	for _, rec := range [][]float32{nil, {0, 0, 0.5, 0, 0}, {0, 0, 0.5, 2, 1, 0.3}, {0, 0, 0, 1, 1, 1}, {0, 0, 1, 1000, 1000}} {
+		w.SetTerrain(rec)
+		if w.Quad.Terrain != nil {
+			t.Errorf("record %v gives terrain, want a flat floor", rec)
+		}
+	}
+}
+
+// TestFlyOverGrid flies over blocks like the random terrain of tools/tinyflightsim/web/terrain.js.
+func TestFlyOverGrid(t *testing.T) {
+	g := physics.Grid{X0: -2, Y0: -2, Cell: 0.2, Cols: 40, Rows: 40, H: make([]float32, 1600)}
+	block := func(x0, x1, y0, y1 int, h float32) {
+		for j := y0; j < y1; j++ {
+			for i := x0; i < x1; i++ {
+				g.H[j*g.Cols+i] = h
+			}
+		}
+	}
+	block(15, 18, 5, 35, 0.3)
+	block(22, 26, 8, 30, 0.15)
+	block(26, 28, 8, 30, 0.3)
+	runTerrain(t, []terrainCase{{name: "blocks", terrain: g.Height, climb: 0.4, to: 4}})
+}

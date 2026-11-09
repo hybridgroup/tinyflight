@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/OrbitControls.js';
+import {heightAt} from './terrain.js';
 
 // The sim works in NED. three.js is Y up, so north is -z, east is +x and down is -y.
 const ned = (x, y, z) => new THREE.Vector3(y, -z, -x);
@@ -37,6 +38,8 @@ export class View {
     this.scene.add(sun, sun.target);
 
     this.scene.add(floor());
+    this.terrain = null;
+    this.terrainMesh = null;
     this.drone = drone();
     this.scene.add(this.drone.root);
 
@@ -63,6 +66,49 @@ export class View {
     this.renderer.setSize(c.clientWidth, c.clientHeight, false);
     this.camera.aspect = c.clientWidth / Math.max(c.clientHeight, 1);
     this.camera.updateProjectionMatrix();
+  }
+
+  // setTerrain draws a map from terrain.js as boxes, or nothing for a flat floor.
+  setTerrain(t) {
+    if (this.terrainMesh) {
+      const old = this.terrainMesh;
+      this.scene.remove(old);
+      old.geometry.dispose();
+      old.material.map.dispose();
+      old.material.dispose();
+      old.dispose();
+      this.terrainMesh = null;
+    }
+    this.terrain = t;
+    if (!t) {
+      return;
+    }
+    const count = t.h.reduce((n, h) => n + (h > 0 ? 1 : 0), 0);
+    const geo = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({map: blockTexture(), roughness: 0.9}), count);
+    mesh.castShadow = mesh.receiveShadow = true;
+    const m = new THREE.Matrix4(), color = new THREE.Color();
+    let k = 0;
+    for (let j = 0; j < t.rows; j++) {
+      for (let i = 0; i < t.cols; i++) {
+        const h = t.h[j * t.cols + i];
+        if (h <= 0) {
+          continue;
+        }
+        const at = ned(t.x0 + (i + 0.5) * t.cell, t.y0 + (j + 0.5) * t.cell, 0);
+        m.makeScale(t.cell, h, t.cell).setPosition(at);
+        mesh.setMatrixAt(k, m);
+        mesh.setColorAt(k, color.setHSL(0.08 + h * 0.05, 0.25, 0.75 - h * 0.35));
+        k++;
+      }
+    }
+    this.terrainMesh = mesh;
+    this.scene.add(mesh);
+  }
+
+  // ground is the height of the surface under a three.js point.
+  ground(p) {
+    return heightAt(this.terrain, -p.z, p.x);
   }
 
   // chase follows behind, pilot stands still like flying line of sight, orbit is free.
@@ -98,11 +144,11 @@ export class View {
     d.led.material.emissive.copy(led);
 
     this.ghost.position.copy(ned(state[s.est], state[s.est + 1], state[s.est + 2]));
-    this.ghost.position.y = Math.max(this.ghost.position.y, 0.002);
+    this.ghost.position.y = Math.max(this.ghost.position.y, this.ground(this.ghost.position) + 0.002);
 
     const p = this.drop.geometry.attributes.position;
     p.setXYZ(0, pos.x, pos.y, pos.z);
-    p.setXYZ(1, pos.x, 0, pos.z);
+    p.setXYZ(1, pos.x, this.ground(pos), pos.z);
     p.needsUpdate = true;
     this.drop.computeLineDistances();
 
@@ -126,7 +172,7 @@ export class View {
       this.chaseYaw += dy * Math.min(dt * 2, 1);
       const back = new THREE.Vector3(Math.sin(this.chaseYaw), 0, Math.cos(this.chaseYaw)).multiplyScalar(0.45);
       const want = pos.clone().add(back).add(new THREE.Vector3(0, 0.18, 0));
-      want.y = Math.max(want.y, 0.08);
+      want.y = Math.max(want.y, this.ground(want) + 0.08);
       this.camera.position.copy(want);
     }
     this.camera.lookAt(pos);
@@ -169,6 +215,24 @@ function floor() {
   const north = new THREE.ArrowHelper(new THREE.Vector3(0, 0, -1), new THREE.Vector3(-0.4, 0.002, 0), 0.3, 0xcc2222, 0.06, 0.04);
   group.add(north);
   return group;
+}
+
+// blockTexture gives the blocks a pattern, since optical flow needs texture.
+function blockTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, 64, 64);
+  for (let i = 0; i < 120; i++) {
+    g.fillStyle = `rgba(0,0,0,${Math.random() * 0.3})`;
+    g.fillRect(Math.random() * 64, Math.random() * 64, 3, 3);
+  }
+  g.strokeStyle = 'rgba(0,0,0,0.25)';
+  g.strokeRect(0.5, 0.5, 63, 63);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 // drone is a StampFly sized model, about 8 cm across. Its local axes are body FRD mapped like ned().

@@ -131,6 +131,12 @@ class Runner {
           this.bytes.set(new Uint8Array(this.inst.exports.memory.buffer, ptr, len), L.telemetry);
           Atomics.add(this.ctrl, L.telemetrySeq, 1);
         },
+        read_terrain: (ptr, len) => {
+          const rec = new Float32Array(this.bytes.buffer, L.terrain, L.terrainFloats);
+          const n = Math.min(len, 5 + rec[3] * rec[4]);
+          new Float32Array(this.inst.exports.memory.buffer, ptr, n).set(rec.subarray(0, n));
+          return n;
+        },
       },
     };
     const result = await WebAssembly.instantiateStreaming(res, imports);

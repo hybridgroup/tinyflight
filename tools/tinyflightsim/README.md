@@ -1,6 +1,6 @@
 # tinyflightsim
 
-A browser flight sim for Tinyflight. It builds the real [firmware/stampfly](../../firmware/stampfly/README.md) with TinyGo to WebAssembly and runs it against a physics model of the StampFly. Fly it with an on-screen M5 Atom Joystick, the keyboard, a gamepad or a joystick, with motor sound.
+A browser flight sim for Tinyflight. It builds the real [firmware/stampfly](../../firmware/stampfly/README.md) with TinyGo to WebAssembly and runs it against a physics model of the StampFly. Fly it with an on-screen M5 Atom Joystick, the keyboard, a gamepad or a joystick, with motor sound, over a flat floor or random terrain.
 
 ![tinyflightsim](../../images/tinyflightsim.png)
 
