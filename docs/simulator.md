@@ -58,6 +58,8 @@ A first flight:
 
 The **Camera** menu has a chase view, a pilot view from where you would stand, and an orbit view you can drag. The orange ring shows where the firmware thinks the drone is. **Pause** and **Speed** stop or slow down simulated time. **Console** shows what the firmware prints.
 
+The motors hum with a pitch that follows each motor command. The browser starts the sound on the first click or key press. **Sound off** turns it off, and the page remembers the choice.
+
 ## How it works
 
 ```mermaid
