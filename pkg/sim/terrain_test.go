@@ -73,3 +73,20 @@ func TestTerrainSensors(t *testing.T) {
 		t.Errorf("not resting on the raised surface, z %v", q.Pos.Z)
 	}
 }
+
+func TestGrid(t *testing.T) {
+	g := Grid{X0: -1, Y0: -1, Cell: 0.5, Cols: 4, Rows: 2, H: []float32{1, 2, 3, 4, 5, 6, 7, 8}}
+	for _, p := range []struct{ x, y, want float32 }{
+		{-1, -1, 1},
+		{0.9, -0.6, 4},
+		{-0.4, -0.4, 6},
+		{0.99, -0.01, 8},
+		{1, 0, 0},     // past the last column
+		{0, 0, 0},     // past the last row
+		{-1.01, 0, 0}, // before the first column
+	} {
+		if got := g.Height(p.x, p.y); got != p.want {
+			t.Errorf("at %v, %v height %v, want %v", p.x, p.y, got, p.want)
+		}
+	}
+}

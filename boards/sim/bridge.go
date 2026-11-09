@@ -22,6 +22,13 @@ func publishState(buf *float32, n uint32)
 //go:wasmimport tinyflightsim telemetry
 func sendTelemetry(buf *byte, n uint32)
 
+// readTerrain copies the terrain record and returns how many floats it wrote. See World.SetTerrain.
+//
+//go:wasmimport tinyflightsim read_terrain
+func readTerrain(buf *float32, n uint32) uint32
+
+var terrain [TerrainHeader + TerrainMaxCells]float32
+
 var board = New(stampfly.Config())
 
 // TelemetrySent counts telemetry packets handed to the browser.
@@ -45,6 +52,7 @@ func Run(f *flight.Flight, fill func(*flight.Flight, *input.AtomTelemetry)) {
 	var state [StateSize]float32
 	var tel input.AtomTelemetry
 	var telPacket [input.AtomTelemetrySize]byte
+	w.SetTerrain(terrain[:readTerrain(&terrain[0], uint32(len(terrain)))])
 	start := time.Now()
 	base := w.Now()
 	for step := 1; ; step++ {

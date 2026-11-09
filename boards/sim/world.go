@@ -133,6 +133,27 @@ func (w *World) State(f *flight.Flight, out *[StateSize]float32) {
 	out[StateXYValid] = flag(pos.XYValid)
 }
 
+// Layout of the terrain record that SetTerrain reads, x0, y0, cell, cols, rows and then the heights.
+const (
+	TerrainHeader   = 5
+	TerrainMaxCells = 100 * 100
+)
+
+// SetTerrain sets the ground from a terrain record. No cells or a bad record means a flat floor.
+func (w *World) SetTerrain(rec []float32) {
+	w.Quad.Terrain = nil
+	if len(rec) < TerrainHeader {
+		return
+	}
+	g := physics.Grid{X0: rec[0], Y0: rec[1], Cell: rec[2], Cols: int(rec[3]), Rows: int(rec[4])}
+	n := g.Cols * g.Rows
+	if g.Cell <= 0 || g.Cols <= 0 || g.Rows <= 0 || n > TerrainMaxCells || len(rec) < TerrainHeader+n {
+		return
+	}
+	g.H = append([]float32(nil), rec[TerrainHeader:TerrainHeader+n]...)
+	w.Quad.Terrain = g.Height
+}
+
 func putVec(out []float32, v fmath.Vec3) { out[0], out[1], out[2] = v.X, v.Y, v.Z }
 
 func flag(b bool) float32 {

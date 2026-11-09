@@ -80,3 +80,22 @@ func floor(x float32) int32 {
 	}
 	return i
 }
+
+// Grid is a height map of square cells Cell m wide, Cols along X and Rows along Y from X0, Y0.
+// H holds the heights row by row. Outside the grid the floor is flat.
+type Grid struct {
+	X0, Y0 float32
+	Cell   float32
+	Cols   int
+	Rows   int
+	H      []float32
+}
+
+// Height returns the height of the cell under x, y.
+func (g Grid) Height(x, y float32) float32 {
+	i, j := floor((x-g.X0)/g.Cell), floor((y-g.Y0)/g.Cell)
+	if i < 0 || j < 0 || int(i) >= g.Cols || int(j) >= g.Rows {
+		return 0
+	}
+	return g.H[int(j)*g.Cols+int(i)]
+}

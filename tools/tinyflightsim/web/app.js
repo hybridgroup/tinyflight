@@ -3,6 +3,7 @@ import {View} from './view.js';
 import {Joystick} from './joystick.js';
 import {Sound} from './motorsound.js';
 import {Gamepad, ControllerPanel} from './gamepad.js';
+import {randomTerrain, record} from './terrain.js';
 
 const $ = (id) => document.getElementById(id);
 const sim = new Sim();
@@ -44,6 +45,27 @@ $('restart').onclick = () => {
   consoleText.textContent = '';
   sim.start();
 };
+// setTerrain keeps the seed in the URL, so a reload or a shared link flies over the same ground.
+function setTerrain(seed) {
+  const t = seed === null ? null : randomTerrain(seed);
+  sim.setTerrain(record(t));
+  view.setTerrain(t);
+  history.replaceState(null, '', seed === null ? location.pathname + location.search : `#terrain=${seed}`);
+}
+const linked = /^#terrain=(\d+)$/.exec(location.hash);
+setTerrain(linked ? Number(linked[1]) : null);
+for (const [id, next] of [['random-terrain', () => Math.floor(Math.random() * 1e9)], ['flat', () => null]]) {
+  const el = $(id);
+  if (el) {
+    el.onclick = () => {
+      setTerrain(next());
+      if (crossOriginIsolated) {
+        consoleText.textContent = '';
+        sim.start();
+      }
+    };
+  }
+}
 $('pause').onclick = () => {
   const paused = sim.ctrl[0] === 0;
   sim.setSpeed(paused ? Number($('speed').value) : 0);

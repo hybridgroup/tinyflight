@@ -12,7 +12,9 @@ const LAYOUT = {
   telemetry: 64,
   state: 192,
   stateFloats: 64,
-  size: 448,
+  terrain: 448, // the record from terrain.js
+  terrainFloats: 5 + 100 * 100,
+  size: 448 + 4 * (5 + 100 * 100),
 };
 
 // Offsets into the state record, from the State constants in boards/sim/world.go.
@@ -29,6 +31,7 @@ export class Sim extends EventTarget {
     super();
     this.speed = 100;
     this.worker = null;
+    this.terrain = new Float32Array(5);
     this.share();
   }
 
@@ -40,10 +43,16 @@ export class Sim extends EventTarget {
     this.state = new Float32Array(this.shared, LAYOUT.state, LAYOUT.stateFloats);
   }
 
+  // setTerrain takes a record from terrain.js for the next start.
+  setTerrain(rec) {
+    this.terrain = rec;
+  }
+
   // start powers on the drone, which builds the firmware first if the sources changed.
   start() {
     this.stop();
     this.share();
+    new Float32Array(this.shared, LAYOUT.terrain, LAYOUT.terrainFloats).set(this.terrain);
     Atomics.store(this.ctrl, LAYOUT.speed, this.speed);
     this.worker = new Worker('runner.js');
     this.worker.onmessage = (e) => this.dispatchEvent(new CustomEvent(e.data.type, {detail: e.data}));
