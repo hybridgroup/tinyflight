@@ -1,10 +1,14 @@
 # Flying in the browser sim
 
-`tools/tinyflightsim` flies the real Tinyflight firmware in a web browser. It builds `firmware/stampfly` with TinyGo to WebAssembly and runs it against a physics model of the StampFly. You fly it with an on-screen copy of the M5 Atom Joystick, the keyboard or a gamepad.
+`tools/tinyflightsim` flies the real Tinyflight firmware in a web browser. It builds `firmware/stampfly` with TinyGo to WebAssembly and runs it against a physics model of the StampFly. You fly it with an on-screen copy of the M5 Atom Joystick, the keyboard, a gamepad or a joystick.
 
 ![tinyflightsim](../images/tinyflightsim.png)
 
 ## Running it
+
+The newest build from main runs at https://hybridgroup.github.io/tinyflight/. `.github/workflows/pages.yml` builds the firmware and copies the page there on every push to main. GitHub Pages cannot set the cross origin isolation headers, so the page loads `coi-serviceworker.js`, which adds them and reloads the page once.
+
+To run it yourself with your own changes:
 
 You need Go and TinyGo. The sim build does not need the drivers checkout from the README.
 
