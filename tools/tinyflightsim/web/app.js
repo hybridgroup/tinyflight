@@ -1,6 +1,7 @@
 import {Sim, STATE, MODES, FAILSAFES} from './sim.js';
 import {View} from './view.js';
 import {Joystick} from './joystick.js';
+import {Sound} from './motorsound.js';
 
 const $ = (id) => document.getElementById(id);
 const sim = new Sim();
@@ -51,6 +52,14 @@ $('speed').onchange = () => {
   $('pause').textContent = 'Pause';
 };
 $('camera').onchange = () => view.setCamera($('camera').value);
+// Pages that reuse app.js may bring their own sound and leave the button out.
+const soundButton = $('sound-toggle');
+const sound = soundButton ? new Sound(sim) : null;
+if (sound) {
+  const label = () => { soundButton.textContent = sound.on ? 'Sound off' : 'Sound on'; };
+  soundButton.onclick = () => { sound.setOn(!sound.on); label(); };
+  label();
+}
 $('console-toggle').onclick = () => { consoleBox.hidden = !consoleBox.hidden; };
 // Keep Space for the joystick screen rather than the last button clicked.
 for (const el of document.querySelectorAll('header button, header select')) {
@@ -102,4 +111,4 @@ if (!crossOriginIsolated) {
 requestAnimationFrame(frame);
 
 // For the joystick and for poking at the sim from the browser console.
-window.tinyflight = {sim, view, joystick};
+window.tinyflight = {sim, view, joystick, sound};
