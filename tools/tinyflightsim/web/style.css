@@ -46,6 +46,9 @@ header {
   border-bottom: 1px solid var(--border);
 }
 h1 { font-size: 16px; margin: 0; }
+.links { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; }
+.links a { color: var(--accent); text-decoration: none; }
+.links a:hover { text-decoration: underline; }
 .tools { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; align-items: center; }
 button, select {
   font: inherit;
