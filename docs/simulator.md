@@ -45,6 +45,8 @@ The joystick works like the real one with the stock StampFlyController firmware.
 | Left, throttle and yaw | W and S, A and D | Left stick |
 | Right, pitch and roll | Arrow keys | Right stick |
 
+The Gamepad columns show the defaults for a pad with the standard layout, such as an Xbox or PlayStation pad. Other gamepads, flight sticks and RC transmitters in USB joystick mode work too. They start with the AETR axis order EdgeTX uses, axis 0 roll, 1 pitch, 2 throttle and 3 yaw, and buttons 0, 1 and 2. Open **Controller** to see the live axes, pick the axis for each stick and invert it. To change a button, click its field in the panel, then press the button on the device. The page remembers the mapping for each device. **Reset to defaults** clears it.
+
 Drag the sticks with the mouse or a finger. They spring back to centre when you let go, like the real joystick.
 
 The keyboard throttle springs back in AltHold and PosHold. In Stabilize and Acro it stays where you leave it, since hovering with a spring loaded key is too hard. X centres it.

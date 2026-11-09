@@ -2,12 +2,14 @@ import {Sim, STATE, MODES, FAILSAFES} from './sim.js';
 import {View} from './view.js';
 import {Joystick} from './joystick.js';
 import {Sound} from './motorsound.js';
+import {Gamepad, ControllerPanel} from './gamepad.js';
 
 const $ = (id) => document.getElementById(id);
 const sim = new Sim();
 const view = new View($('view'));
 // MAC in boards/sim/world.go.
-const joystick = new Joystick($('joystick'), sim, [0x02, 0x54, 0x46, 0x53, 0x49, 0x4D]);
+const gamepad = new Gamepad();
+const joystick = new Joystick($('joystick'), sim, [0x02, 0x54, 0x46, 0x53, 0x49, 0x4D], gamepad);
 
 const status = $('status');
 function setStatus(text, cls = '') {
@@ -61,6 +63,11 @@ if (sound) {
   label();
 }
 $('console-toggle').onclick = () => { consoleBox.hidden = !consoleBox.hidden; };
+const controllerBox = $('controller');
+if (controllerBox) {
+  new ControllerPanel(controllerBox, gamepad);
+  $('controller-toggle').onclick = () => { controllerBox.hidden = !controllerBox.hidden; };
+}
 // Keep Space for the joystick screen rather than the last button clicked.
 for (const el of document.querySelectorAll('header button, header select')) {
   el.addEventListener('click', () => el.blur());
@@ -111,4 +118,4 @@ if (!crossOriginIsolated) {
 requestAnimationFrame(frame);
 
 // For the joystick and for poking at the sim from the browser console.
-window.tinyflight = {sim, view, joystick, sound};
+window.tinyflight = {sim, view, joystick, sound, gamepad};

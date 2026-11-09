@@ -109,6 +109,29 @@ main { position: relative; flex: 1; min-height: 0; }
   word-break: break-all;
   flex: 1;
 }
+#controller {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: min(340px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  z-index: 1;
+}
+#controller[hidden] { display: none; }
+#controller p { margin: 0 0 8px; }
+#controller .device { font-family: var(--mono); font-size: 11px; color: var(--muted); word-break: break-all; }
+#controller .axes, #controller .map { display: grid; gap: 4px 8px; align-items: center; margin-bottom: 8px; }
+#controller .axes { grid-template-columns: auto 1fr; font: 11px var(--mono); color: var(--muted); }
+#controller .map { grid-template-columns: auto auto auto; }
+#controller .bar { position: relative; height: 8px; border-radius: 4px; background: var(--border); }
+#controller .bar > div { position: absolute; top: 0; bottom: 0; left: 50%; border-radius: 4px; background: var(--accent); }
+#controller button.learning { border-color: var(--accent); color: var(--accent); }
 @media (max-width: 700px) {
   #console { top: auto; bottom: 200px; max-height: 30%; }
   #hud { font-size: 12px; }
