@@ -45,7 +45,7 @@ See [docs/architecture.md](docs/architecture.md) for architectural details. See 
 
 ## tinyflightsim
 
-Fly the real firmware in a web browser before you fly the drone. See [docs/simulator.md](docs/simulator.md).
+Fly the real firmware in a web browser before you fly the drone. Try it at https://hybridgroup.github.io/tinyflight/ or see [docs/simulator.md](docs/simulator.md).
 
 ![tinyflightsim](images/tinyflightsim.png)
 

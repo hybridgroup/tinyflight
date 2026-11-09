@@ -1,0 +1,49 @@
+# Build tinyflightsim as a static page and put it on GitHub Pages.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and let a running one finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: tinygo/tinygo-dev:latest
+    env:
+      # Git in the container may not trust the checkout, and the sim build needs no VCS stamp.
+      GOFLAGS: -buildvcs=false
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the page
+        run: |
+          mkdir -p site/api
+          cp -r tools/tinyflightsim/web/* site/
+          cp LICENSE site/
+          tinygo build -target=wasip1 -tags=tinyflightsim -no-debug -o site/api/firmware.wasm ./firmware/stampfly
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
