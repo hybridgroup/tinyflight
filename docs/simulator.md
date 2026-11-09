@@ -6,7 +6,7 @@
 
 ## Running it
 
-The newest build from main runs at https://hybridgroup.github.io/tinyflight/. `.github/workflows/pages.yml` builds the firmware and copies the page there on every push to main. GitHub Pages cannot set the cross origin isolation headers, so the page loads `coi-serviceworker.js`, which adds them and reloads the page once.
+The newest build from main runs at https://tinyflight.app/. `.github/workflows/pages.yml` builds the firmware and copies the page there on every push to main. GitHub Pages cannot set the cross origin isolation headers, so the page loads `coi-serviceworker.js`, which adds them and reloads the page once.
 
 To run it yourself with your own changes:
 
