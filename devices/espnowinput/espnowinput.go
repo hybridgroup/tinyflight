@@ -1,21 +1,20 @@
 //go:build tinygo && (esp32s3 || esp32c3 || esp32)
 
-// Package espnowinput receives M5 Atom Joystick packets over ESP-NOW and pairs like the stock StampFly firmware.
+// Package espnowinput receives M5 Atom Joystick and command protocol packets over ESP-NOW, and pairs like the stock StampFly firmware.
 // Protocol from rc_init, send_peer_info and OnDataRecv in https://github.com/m5stack/M5StampFly/blob/main/src/rc.cpp
 package espnowinput
 
 import (
-	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/hybridgroup/tinyflight/pkg/command"
 	"github.com/hybridgroup/tinyflight/pkg/hal"
 	"github.com/hybridgroup/tinyflight/pkg/input"
-	"github.com/hybridgroup/tinyflight/pkg/msg"
 	"tinygo.org/x/espradio"
 )
 
-// The stock firmware announces 50 times at 50 ms only at boot. This keeps going until a joystick answers.
+// The stock firmware announces 50 times at 50 ms only at boot. This keeps going while the drone has no owner.
 const announceEvery = 50 * time.Millisecond
 
 // announceTag ends the pairing packet, peer_command in rc.cpp.
@@ -24,24 +23,18 @@ var announceTag = [4]byte{0xaa, 0x55, 0x16, 0x88}
 var _ hal.Input = (*Input)(nil)
 
 type Input struct {
-	mac      [6]byte
-	channel  uint8
-	dec      *input.AtomJoystick
-	mu       sync.Mutex
-	latest   msg.ManualInput
-	fresh    bool
-	paired   atomic.Bool
-	joyAddr  [6]byte // joystick MAC, written once before paired is set
-	Packets  atomic.Uint32
-	Rejected atomic.Uint32
-	// Sent counts telemetry packets queued. SendFailed counts those that failed to queue or the joystick did not acknowledge.
+	*Link
+	mac     [6]byte
+	channel uint8
+	start   time.Time
+	// Sent counts telemetry packets queued. SendFailed counts those that failed to queue or the controller did not acknowledge.
 	Sent         atomic.Uint32
 	SendFailed   atomic.Uint32
 	CameraSent   atomic.Uint32
 	CameraFailed atomic.Uint32
 }
 
-// Start brings up the radio on Channel, listens for the joystick, and announces this vehicle until it pairs.
+// Start brings up the radio on Channel, listens for a joystick or ground station, and announces this vehicle while it has no owner.
 func Start() (*Input, error) {
 	ch := Channel()
 	if err := espradio.Enable(espradio.Config{}); err != nil {
@@ -60,7 +53,7 @@ func Start() (*Input, error) {
 	if err := espradio.ESPNowInit(); err != nil {
 		return nil, err
 	}
-	in := &Input{mac: mac, dec: input.NewAtomJoystick(mac), channel: ch}
+	in := &Input{Link: NewLink(mac), mac: mac, channel: ch, start: time.Now()}
 	espradio.ESPNowSetReceiveHandler(in.receive)
 	espradio.ESPNowSetSendHandler(in.sent)
 	err = espradio.ESPNowAddPeer(espradio.ESPNowPeer{
@@ -75,42 +68,68 @@ func Start() (*Input, error) {
 	return in, nil
 }
 
-// RunTelemetry sends telemetry to the joystick forever so it can show the vehicle state.
-// fill is called before each send. It runs on core 0 and does not allocate.
-// It goes to the joystick's own address, as telemetry_send in rc.cpp does, since a broadcast gets no
-// acknowledgement or retries and is easily lost on a busy channel.
-func (in *Input) RunTelemetry(every time.Duration, fill func(t *input.AtomTelemetry)) {
+// RunTelemetry sends telemetry to the owner forever, Atom telemetry to a joystick and State to a ground station.
+// It also answers Hello with info. fillAtom and fillState are called before each send.
+// It runs on core 0 and does not allocate. Telemetry goes to the owner's own address, as telemetry_send
+// in rc.cpp does, since a broadcast gets no acknowledgement or retries and is easily lost on a busy channel.
+func (in *Input) RunTelemetry(every time.Duration, fillAtom func(t *input.AtomTelemetry), fillState func(s *command.State), info command.Info) {
 	espradio.LockToCore0()
 	defer espradio.UnlockFromCore0()
 	var t input.AtomTelemetry
 	var pkt [input.AtomTelemetrySize]byte
-	var addr [6]byte
-	added := false
-	for {
+	var p command.Packet
+	var buf [command.MaxSize]byte
+	var seq uint16
+	info.Protocol = command.Version
+	info.MAC = in.mac
+	for tick := 0; ; tick++ {
 		time.Sleep(every)
-		if !in.paired.Load() {
-			continue
+		if addr, ok := in.TakeHello(); ok {
+			p = command.Packet{Type: command.TypeInfo, Info: info}
+			if _, kind := in.Owner(); kind != OwnerNone {
+				p.Info.Flags |= command.InfoOwned
+			}
+			seq++
+			p.Seq = seq
+			in.send(addr, buf[:p.Encode(&buf)])
 		}
-		if !added {
-			addr = in.joyAddr
-			err := espradio.ESPNowAddPeer(espradio.ESPNowPeer{Address: addr, Channel: in.channel, If: espradio.WiFiInterfaceSTA})
-			if err != nil {
-				in.SendFailed.Add(1)
+		addr, kind := in.Owner()
+		switch kind {
+		case OwnerJoystick:
+			fillAtom(&t)
+			t.Encode(&pkt)
+			in.send(addr, pkt[:])
+		case OwnerGround:
+			if tick%2 != 0 {
 				continue
 			}
-			added = true
-		}
-		fill(&t)
-		t.Encode(&pkt)
-		if espradio.ESPNowSend(&addr, pkt[:]) != nil {
-			in.SendFailed.Add(1)
-		} else {
-			in.Sent.Add(1)
+			p = command.Packet{Type: command.TypeState}
+			fillState(&p.State)
+			in.FillState(&p.State)
+			seq++
+			p.Seq = seq
+			in.send(addr, buf[:p.Encode(&buf)])
 		}
 	}
 }
 
-// RunCamera broadcasts camera frames forever once a joystick has paired. read fills the next
+// send adds addr as a peer if needed and sends data to it, counting the result.
+func (in *Input) send(addr [6]byte, data []byte) {
+	if !espradio.ESPNowPeerExists(addr) {
+		err := espradio.ESPNowAddPeer(espradio.ESPNowPeer{Address: addr, Channel: in.channel, If: espradio.WiFiInterfaceSTA})
+		if err != nil {
+			in.SendFailed.Add(1)
+			return
+		}
+	}
+	if espradio.ESPNowSend(&addr, data) != nil {
+		in.SendFailed.Add(1)
+	} else {
+		in.Sent.Add(1)
+	}
+}
+
+// RunCamera broadcasts camera frames forever while the drone has an owner. read fills the next
 // frame and reports false when there is none. It runs on core 0 and does not allocate.
 func (in *Input) RunCamera(every time.Duration, read func(f *input.CameraFrame) bool) {
 	espradio.LockToCore0()
@@ -120,7 +139,7 @@ func (in *Input) RunCamera(every time.Duration, read func(f *input.CameraFrame) 
 	addr := [6]byte(espradio.ESPNowBroadcastAddr)
 	for {
 		time.Sleep(every)
-		if !in.paired.Load() || !read(&f) {
+		if !in.Paired() || !read(&f) {
 			continue
 		}
 		n := f.Encode(&pkt)
@@ -132,13 +151,16 @@ func (in *Input) RunCamera(every time.Duration, read func(f *input.CameraFrame) 
 	}
 }
 
-// Paired reports whether a joystick has sent a valid packet.
-func (in *Input) Paired() bool { return in.paired.Load() }
+// Paired reports whether a controller owns the drone.
+func (in *Input) Paired() bool {
+	_, kind := in.Owner()
+	return kind != OwnerNone
+}
 
 // MAC is this vehicle's address. The joystick sends to its last three bytes.
 func (in *Input) MAC() [6]byte { return in.mac }
 
-// announce sends the pairing packet the joystick listens for, with the channel, MAC and tag.
+// announce sends the pairing packet the joystick listens for, with the channel, MAC and tag, while the drone has no owner.
 func (in *Input) announce() {
 	espradio.LockToCore0()
 	defer espradio.UnlockFromCore0()
@@ -147,44 +169,21 @@ func (in *Input) announce() {
 	copy(pkt[1:7], in.mac[:])
 	copy(pkt[7:], announceTag[:])
 	addr := [6]byte(espradio.ESPNowBroadcastAddr)
-	for !in.paired.Load() {
-		espradio.ESPNowSend(&addr, pkt[:])
+	for {
+		if !in.Paired() {
+			espradio.ESPNowSend(&addr, pkt[:])
+		}
 		time.Sleep(announceEvery)
 	}
 }
 
 func (in *Input) receive(r espradio.ESPNowReceive) {
-	in.mu.Lock()
-	err := in.dec.Decode(r.Data, 0, &in.latest)
-	if err == nil {
-		in.fresh = true
-	}
-	in.mu.Unlock()
-	if err == nil {
-		if !in.paired.Load() {
-			in.joyAddr = r.SourceAddress
-			in.paired.Store(true)
-		}
-		in.Packets.Add(1)
-	} else {
-		in.Rejected.Add(1)
-	}
+	in.Receive(r.SourceAddress, r.Data, time.Since(in.start))
 }
 
-// sent counts telemetry the joystick did not acknowledge. Broadcasts are never acknowledged, so they are skipped.
+// sent counts telemetry the controller did not acknowledge. Broadcasts are never acknowledged, so they are skipped.
 func (in *Input) sent(r espradio.ESPNowSendReport) {
 	if r.DestinationAddress != [6]byte(espradio.ESPNowBroadcastAddr) && r.Status != espradio.ESPNowSendSuccess {
 		in.SendFailed.Add(1)
 	}
-}
-
-func (in *Input) ReadInput(out *msg.ManualInput) bool {
-	in.mu.Lock()
-	ok := in.fresh
-	if ok {
-		*out = in.latest
-		in.fresh = false
-	}
-	in.mu.Unlock()
-	return ok
 }
