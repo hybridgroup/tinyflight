@@ -1,6 +1,6 @@
 # Command protocol design
 
-Status: design, not built yet.
+Status: built and tested in the simulator, not yet flown on a real StampFly.
 
 This is a higher level radio protocol so a program can fly a Tinyflight drone with commands such as take off, hover, go right, hover, land. It is modeled on the Parrot Minidrone protocol used by [tinygo-minidrone](https://github.com/hybridgroup/tinygo-minidrone), but runs over ESP-NOW. It shares the radio with the Atom Joystick protocol in [protocol.md](protocol.md), so the same firmware can be flown by either one.
 
@@ -151,11 +151,13 @@ Notes:
 
 The packet encoding lives in a pure Go package, `pkg/command`, shared by the drone and the ground station and tested with `go test`.
 
-A client package wraps `espradio` with an API close to tinygo-minidrone:
+The `groundstation` package wraps `espradio` with an API close to tinygo-minidrone. See [firmware/ground-takeoff](../firmware/ground-takeoff/README.md) for a full example.
 
 ```go
-d, err := groundstation.Find(time.Second) // broadcast Hello and take the first Info
-d.Start()                                  // start the 20 Hz Pcmd heartbeat
+station, err := groundstation.Start()     // radio on the same channel as the drones
+infos, err := station.Find(time.Second)   // broadcast Hello and collect each Info
+d := station.Drone(infos[0].MAC)
+d.Start()                                 // start the 20 Hz Pcmd heartbeat
 d.TakeOff()
 time.Sleep(5 * time.Second)
 d.Right(30)
@@ -167,13 +169,14 @@ d.Land()
 
 | Method | Does |
 |---|---|
-| `TakeOff()`, `Land()`, `Emergency()` | Send the one shot command and retry until acknowledged |
+| `Start()`, `Halt()` | Start and stop the Pcmd heartbeat |
+| `TakeOff()`, `TakeOffTo(cm)`, `Land()`, `Emergency()` | Clear any movement, then send the one shot command and retry until acknowledged |
 | `Up`, `Down`, `Forward`, `Backward`, `Right`, `Left`, `Clockwise`, `CounterClockwise` | Set one axis of the next Pcmd, 0 to 100 |
 | `Hover()` | Set every axis to 0 |
 | `FlyingStateChange(func(state int))` | Called when `State` shows a new flying state |
-| `State()` | The last `State` received |
+| `State()` | The last `State` received, and whether one has arrived |
 
-Each `Drone` holds its own peer and heartbeat, so one ground station can fly several drones. ESP-NOW allows about 20 unencrypted peers, and every drone must be on the same Wi-Fi channel.
+Each `Drone` has its own heartbeat, and the `Station` routes each `State` by the sender's MAC, so one ground station can fly several drones. ESP-NOW allows about 20 unencrypted peers, and every drone must be on the same Wi-Fi channel.
 
 ## Testing
 
@@ -188,7 +191,7 @@ Each `Drone` holds its own peer and heartbeat, so one ground station can fly sev
 2. Command state machine in `pkg/input` with tests, and closed loop tests in `boards/sim`.
 3. Dispatcher and ownership in `devices/espnowinput`, and `State` telemetry.
 4. Ground station client package and an example program under `firmware/`.
-5. Update [protocol.md](protocol.md) with the final packet tables.
+5. Fly it on a real StampFly.
 
 ## Open questions
 
