@@ -9,9 +9,11 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/hybridgroup/tinyflight"
 	"github.com/hybridgroup/tinyflight/boards/stampfly"
 	"github.com/hybridgroup/tinyflight/devices/amg88xx"
 	"github.com/hybridgroup/tinyflight/devices/espnowinput"
+	"github.com/hybridgroup/tinyflight/pkg/command"
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/input"
@@ -53,7 +55,13 @@ func main() {
 
 	f := flight.New(b.Hardware, stampfly.Config())
 	if joystick != nil {
-		go joystick.RunTelemetry(50*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) })
+		joystick.SetVehicle(f)
+		info := command.Info{Firmware: tinyflight.VersionNumbers(), Flags: command.InfoPosHold}
+		if camera != nil {
+			info.Flags |= command.InfoCamera
+		}
+		go joystick.RunTelemetry(50*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) },
+			func(s *command.State) { command.FillState(f, s) }, info)
 		if camera != nil {
 			// The driver Configure sets the AMG88xx to 10 frames per second.
 			go joystick.RunCamera(100*time.Millisecond, func(fr *input.CameraFrame) bool { return camera.ReadFrame(fr) == nil })

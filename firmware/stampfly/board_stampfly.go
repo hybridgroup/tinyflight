@@ -7,13 +7,15 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/hybridgroup/tinyflight"
 	"github.com/hybridgroup/tinyflight/boards/stampfly"
 	"github.com/hybridgroup/tinyflight/devices/espnowinput"
+	"github.com/hybridgroup/tinyflight/pkg/command"
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 	"github.com/hybridgroup/tinyflight/pkg/input"
 )
 
-// setup starts the board and the ESP-NOW joystick. It reports false when there is no IMU.
+// setup starts the board and the ESP-NOW radio for a joystick or ground station. It reports false when there is no IMU.
 func setup() (flight.Hardware, bool) {
 	b := stampfly.New()
 	for _, err := range b.Errors {
@@ -35,7 +37,10 @@ func setup() (flight.Hardware, bool) {
 
 func startTelemetry(f *flight.Flight) {
 	if joystick != nil {
-		go joystick.RunTelemetry(50*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) })
+		joystick.SetVehicle(f)
+		info := command.Info{Firmware: tinyflight.VersionNumbers(), Flags: command.InfoPosHold}
+		go joystick.RunTelemetry(50*time.Millisecond, func(t *input.AtomTelemetry) { fillTelemetry(f, t) },
+			func(s *command.State) { command.FillState(f, s) }, info)
 	}
 }
 

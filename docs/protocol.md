@@ -22,7 +22,9 @@ The joystick does not know the drone's MAC address until they pair.
 2. In pairing mode, the joystick switches through channels 1 to 14 until it hears that packet. It then saves the channel and the drone's MAC address.
 3. From then on the joystick sends control packets to that MAC address on that channel.
 
-The stock drone firmware sends the pairing packet only 50 times, at boot. Tinyflight keeps sending it until the first valid control packet arrives, so the joystick can pair at any time without resetting the drone.
+The stock drone firmware sends the pairing packet only 50 times, at boot. Tinyflight keeps sending it while no controller owns the drone, so the joystick can pair at any time without resetting the drone.
+
+The first joystick to send a valid control packet owns the drone, and packets from any other joystick are ignored. Once the drone is disarmed and the owner has been quiet for 2 s, another controller can take over. A ground station using the [command protocol](command-protocol.md) shares the same rule.
 
 ### Pairing packet, drone to joystick, 11 bytes
 
@@ -68,7 +70,7 @@ This is done by `pkg/input/atom.go`.
 
 ## Telemetry packet, drone to joystick, 120 bytes
 
-Tinyflight sends it 20 times per second to the MAC address of the first joystick packet it accepts, as `telemetry_send` in [rc.cpp](https://github.com/m5stack/M5StampFly/blob/main/src/rc.cpp) does. A broadcast gets no acknowledgement or retries, so on a busy channel too many were lost. The joystick shows the drone attitude, battery and altitude. In altitude hold mode it also needs the flight mode, or its arm button does nothing. Without telemetry for a while it shows No StampFly, and its screen press stops sending arm and disarm. `tel_failed` in the status line counts packets the joystick did not acknowledge.
+Tinyflight sends it 20 times per second to the MAC address of the joystick that owns the drone, as `telemetry_send` in [rc.cpp](https://github.com/m5stack/M5StampFly/blob/main/src/rc.cpp) does. A broadcast gets no acknowledgement or retries, so on a busy channel too many were lost. The joystick shows the drone attitude, battery and altitude. In altitude hold mode it also needs the flight mode, or its arm button does nothing. Without telemetry for a while it shows No StampFly, and its screen press stops sending arm and disarm. `tel_failed` in the status line counts packets the joystick did not acknowledge.
 
 **Header:** bytes 0 and 1 are both 88.
 
@@ -101,7 +103,7 @@ The stock firmware also defines 0 init, 1 averaging, 4 log and 6 flip.
 
 ## Camera packet, drone to ground receiver
 
-Sent when an optional camera is plugged in, such as the AMG8833 thermal sensor on the Grove port. See [camera.md](camera.md). It is a broadcast, sent only after a joystick has paired. The joystick ignores it, since it only reads packets that start with `88 88`.
+Sent when an optional camera is plugged in, such as the AMG8833 thermal sensor on the Grove port. See [camera.md](camera.md). It is a broadcast, sent only while a controller owns the drone. The joystick ignores it, since it only reads packets that start with `88 88`.
 
 A frame larger than one packet is split into chunks. Chunk `n` holds the pixels from `n * 119` on, in rows from the top left. The AMG8833 fits in one chunk.
 
