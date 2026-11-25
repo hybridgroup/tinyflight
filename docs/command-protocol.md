@@ -74,7 +74,7 @@ A packet with the wrong length for its type, or a bad checksum, is dropped.
 
 **Pcmd** is also the heartbeat. Once started, the ground station sends it 20 times per second, with zeros when it wants to hover, as tinygo-minidrone does with `StartPcmd`. If it stops, the commander lands the drone after `HoldTimeout`, 2 s.
 
-**TakeOff, Land and Emergency** are one shot commands. The drone puts the sequence number of the last one it acted on in `State`. The ground station sends the command again every 100 ms until `State` shows it, for up to 1 s.
+**TakeOff, Land and Emergency** are one shot commands. The drone puts the sequence number of the last one it acted on in `State`, and ignores any command whose sequence is not newer than that. The ground station sends the command again every 100 ms until `State` shows it, for up to 1 s.
 
 ### Drone to ground station
 
@@ -124,12 +124,12 @@ The values match `FlyingState` in tinygo-minidrone, so programs written for it r
 
 ### Turning commands into input
 
-A state machine in `pkg/input/command.go` makes one `msg.ManualInput` per step. Mode is always PosHold, `ArmToggle` is false so `Arm` works like a switch, and `Throttle` is 0 so the arming checks pass.
+`input.Commands` in `pkg/input/command.go` makes a `msg.ManualInput` each time a packet arrives. Mode is always PosHold, `ArmToggle` is false so `Arm` works like a switch, and `Throttle` is 0 so the arming checks pass.
 
 | State | Arm | Climb | Sticks | Moves to |
 |---|---|---|---|---|
 | Landed | false | 0 | 0 | Taking off on TakeOff |
-| Taking off | true | 0.5 | 0 | Hovering at the target height |
+| Taking off | true | 1, slowing to 0.2 over the last 30 cm | 0 | Hovering within 3 cm of the target height |
 | Hovering | true | 0 | 0 | Flying on a Pcmd that is not all zeros |
 | Flying | true | up / 100 | right / 100, -forward / 100, yaw / 100 | Hovering on an all zero Pcmd |
 | Landing | true | -1 | 0 | Landed when the drone disarms |
@@ -138,7 +138,7 @@ A state machine in `pkg/input/command.go` makes one `msg.ManualInput` per step. 
 Notes:
 
 - Pitch is negated since a positive pitch stick is nose up, which flies backward.
-- Taking off needs the height estimate, which `hal.Input` does not give today. The board passes in a function that reads the height from the flight loop.
+- Taking off needs the height and arm state, which `hal.Input` does not give. `Commands.Vehicle` reads them from the flight loop, which a `*flight.Flight` provides.
 - Landing relies on the existing landed check, `LandedDisarm` in `pkg/flight`, which disarms after 2 s on the ground.
 - A Pcmd while taking off or landing is used only as the heartbeat.
 - If the commander disarms on its own, for example on a tilt failsafe, the state goes to Landed and `State` reports the failsafe.
