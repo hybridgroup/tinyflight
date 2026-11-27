@@ -101,6 +101,21 @@ jobs:
           total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $NF}')
           echo "## Coverage tools/cameraview: $total" >> "$GITHUB_STEP_SUMMARY"
 
+  swarm:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/swarm
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: tools/swarm/go.mod
+
+      - name: Test tools/swarm
+        run: go vet ./... && go test ./...
+
   sim-firmware:
     runs-on: ubuntu-latest
     container: tinygo/tinygo-dev:latest
@@ -137,6 +152,8 @@ jobs:
           - name: camera-receiver
             flags: -target=xiao-esp32c3
           - name: ground-takeoff
+            flags: -target=xiao-esp32c3
+          - name: radio-bridge
             flags: -target=xiao-esp32c3
     steps:
       - uses: actions/checkout@v5

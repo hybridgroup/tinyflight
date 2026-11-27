@@ -61,6 +61,7 @@ See [docs/command-protocol.md](docs/command-protocol.md) for detailed info. The 
 - Flight modes: Acrobatic, Stabilized, Altitude Hold, and <b>Position Hold</b>
 - Fly with the M5 Atom Joystick over ESP-NOW, using its stock firmware
 - Fly from a TinyGo program on a ground station ESP32 with commands like take off, go right and land
+- Fly several drones at once from a computer through a radio bridge
 - Arming checks, plus failsafes for lost pilot input, low battery, lost height, crashes and IMU failure
 - Pure Go flight stack with full set of tests, including closed loop tests on a simulated quad
 - tinyflightsim, a browser flight sim that runs the real firmware as WebAssembly, flown with an on-screen Atom Joystick or a ground station program
@@ -101,7 +102,7 @@ devices/       adapters from TinyGo drivers to pkg/hal
 boards/        board setup, such as boards/stampfly, and boards/sim for the browser sim
 firmware/      firmware and bench tools to flash
 groundstation/ package for ground station programs that fly drones with the command protocol
-tools/         host tools, such as the tinyflightsim browser sim and the cameraview image viewer
+tools/         host tools, such as the tinyflightsim browser sim, the cameraview image viewer, and swarm
 docs/          documentation
 ```
 
@@ -155,4 +156,5 @@ Flash the camera receiver with the same setting.
 | [`stampfly-cameratest`](firmware/stampfly-cameratest/README.md) | Bench tool for the thermal camera. The motors stay off and frames go over USB to `tools/cameraview`. See [docs/camera.md](docs/camera.md#testing-on-the-bench). |
 | [`stampfly-channelscan`](firmware/stampfly-channelscan/README.md) | Counts the Wi-Fi traffic on each channel and prints the quietest one to fly on. The motors stay off. |
 | [`ground-takeoff`](firmware/ground-takeoff/README.md) | For an ESP32-C3 or ESP32-S3 on the ground, not the StampFly. Flies a StampFly with the command protocol, taking off, moving and landing on its own. See [docs/command-protocol.md](docs/command-protocol.md). |
+| [`radio-bridge`](firmware/radio-bridge/README.md) | For an ESP32-C3 or ESP32-S3 on the computer, not the StampFly. Forwards ESP-NOW packets to and from USB serial, so `tools/swarm` can fly several drones at once. See [docs/multi-drone.md](docs/multi-drone.md). |
 | [`camera-receiver`](firmware/camera-receiver/README.md) | For an ESP32-C3 on the computer, not the StampFly. Prints camera frames heard over ESP-NOW for `tools/cameraview`, and shows them on an SSD1306 display if one is attached. See [docs/camera.md](docs/camera.md). |
