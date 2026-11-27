@@ -1,6 +1,7 @@
 // An on-screen M5 Atom Joystick running the stock StampFlyController firmware.
 // Controls follow docs/joystick.md and the packets follow docs/protocol.md.
 import {Gamepad} from './gamepad.js';
+import {JOYSTICK_MAC} from './sim.js';
 
 const PACKET_MS = 10; // about 100 packets per second
 const ARM_PACKETS = 20; // the arm byte stays 1 for about 20 packets after a press
@@ -237,7 +238,10 @@ export class Joystick {
     const dt = Math.min((now - this.lastTick) / 1000, 0.1);
     this.lastTick = now;
     this.readSticks(dt);
-    this.sim.sendPacket(this.packet());
+    // Quiet on the setup screen, so a ground station program can fly the drone instead.
+    if (this.screen === 'running' || this.armPackets > 0) {
+      this.sim.sendPacket(JOYSTICK_MAC, this.packet());
+    }
     if (this.armPackets > 0) {
       this.armPackets--;
     }

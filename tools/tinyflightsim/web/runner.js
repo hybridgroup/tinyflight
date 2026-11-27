@@ -112,24 +112,34 @@ class Runner {
       },
       // See boards/sim/bridge.go.
       tinyflightsim: {
-        read_input: (ptr, len) => {
+        read_packet: (srcPtr, ptr, len) => {
           this.checkStop();
-          const dst = new Uint8Array(this.inst.exports.memory.buffer, ptr, len);
-          for (;;) {
-            const seq = Atomics.load(this.ctrl, L.inputSeq);
-            dst.set(this.bytes.subarray(L.input, L.input + len));
-            if (Atomics.load(this.ctrl, L.inputSeq) === seq) {
-              return seq;
-            }
+          const r = Atomics.load(this.ctrl, L.queueRead);
+          if (r === Atomics.load(this.ctrl, L.queueWrite)) {
+            return 0;
           }
+          const at = L.queue + (r % L.slots) * L.slotSize;
+          const n = Math.min(this.bytes[at + 6], len);
+          const mem = this.inst.exports.memory.buffer;
+          new Uint8Array(mem, srcPtr, 6).set(this.bytes.subarray(at, at + 6));
+          new Uint8Array(mem, ptr, n).set(this.bytes.subarray(at + 8, at + 8 + n));
+          Atomics.store(this.ctrl, L.queueRead, r + 1);
+          return n;
+        },
+        send_packet: (dstPtr, ptr, len) => {
+          const mem = this.inst.exports.memory.buffer;
+          const dst = new Uint8Array(mem, dstPtr, 6).slice();
+          const data = new Uint8Array(mem, ptr, len).slice();
+          if (dst.every((b, i) => b === L.joystick[i])) {
+            this.bytes.set(data.subarray(0, 120), L.telemetry);
+            Atomics.add(this.ctrl, L.telemetrySeq, 1);
+            return;
+          }
+          postMessage({type: 'radio', dst, data});
         },
         publish_state: (ptr, len) => {
           this.state.set(new Float32Array(this.inst.exports.memory.buffer, ptr, len));
           Atomics.add(this.ctrl, L.stateSeq, 1);
-        },
-        telemetry: (ptr, len) => {
-          this.bytes.set(new Uint8Array(this.inst.exports.memory.buffer, ptr, len), L.telemetry);
-          Atomics.add(this.ctrl, L.telemetrySeq, 1);
         },
         read_terrain: (ptr, len) => {
           const rec = new Float32Array(this.bytes.buffer, L.terrain, L.terrainFloats);

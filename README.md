@@ -35,7 +35,7 @@ Fly the real firmware in a web browser before you fly the real drone. Try it at 
 - Fly from a TinyGo program on a ground station ESP32 with commands like take off, go right and land
 - Arming checks, plus failsafes for lost pilot input, low battery, lost height, crashes and IMU failure
 - Pure Go flight stack with full set of tests, including closed loop tests on a simulated quad
-- tinyflightsim, a browser flight sim that runs the real firmware as WebAssembly, flown with an on-screen Atom Joystick
+- tinyflightsim, a browser flight sim that runs the real firmware as WebAssembly, flown with an on-screen Atom Joystick or a ground station program
 - Live images from an optional AMG8833 thermal camera, sent over ESP-NOW and shown in the browser
 - Bench control with text lines over USB serial
 - Optional blackbox flight log saved to flash
@@ -52,7 +52,7 @@ Architectural details are documented here in [docs/architecture.md](docs/archite
 
 The radio protocol used with the M5 Atom Joystick is documented in [docs/protocol.md](docs/protocol.md).
 
-To fly from a program on a ground station ESP32 with commands like take off, go right and land, see [docs/command-protocol.md](docs/command-protocol.md).
+To fly from a program on a ground station ESP32 with commands like take off, go right and land, see [docs/command-protocol.md](docs/command-protocol.md). The same program can fly the drone in tinyflightsim first. See [docs/simulator.md](docs/simulator.md#flying-with-a-ground-station-program).
 
 How to use the joystick, see [docs/joystick.md](docs/joystick.md).
 

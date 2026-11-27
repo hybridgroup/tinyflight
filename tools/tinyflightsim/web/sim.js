@@ -1,27 +1,43 @@
 // Sim owns the runner worker and the memory it shares with it.
 
+// MAC addresses from boards/sim/world.go.
+export const DRONE_MAC = [0x02, 0x54, 0x46, 0x53, 0x49, 0x4D];
+export const JOYSTICK_MAC = [0x02, 0x54, 0x46, 0x4A, 0x4F, 0x59];
+
+const TERRAIN = 448;
+const TERRAIN_FLOATS = 5 + 100 * 100;
+const QUEUE = TERRAIN + 4 * TERRAIN_FLOATS;
+
 // Shared memory layout. The runner gets a copy in its start message.
 const LAYOUT = {
   ctrlInts: 8,
   speed: 0, // percent of real time, 0 is paused
-  inputSeq: 1,
+  queueWrite: 1, // packets put in the queue, by the page
   stateSeq: 2,
   telemetrySeq: 3,
   stop: 4, // set to end the run
-  input: 32, // byte offset of the joystick packet
-  telemetry: 64,
+  queueRead: 5, // packets taken from the queue, by the runner
+  telemetry: 64, // the last packet the drone sent the joystick
   state: 192,
   stateFloats: 64,
-  terrain: 448, // the record from terrain.js
-  terrainFloats: 5 + 100 * 100,
-  size: 448 + 4 * (5 + 100 * 100),
+  terrain: TERRAIN, // the record from terrain.js
+  terrainFloats: TERRAIN_FLOATS,
+  // Packets on their way to the drone. Each slot is the 6 byte source, the length, and the payload from byte 8.
+  queue: QUEUE,
+  slots: 16,
+  slotSize: 48,
+  joystick: JOYSTICK_MAC,
+  size: QUEUE + 16 * 48,
 };
 
 // Offsets into the state record, from the State constants in boards/sim/world.go.
 export const STATE = {
   time: 0, pos: 1, vel: 4, quat: 7, motors: 11, led: 15, est: 18,
-  armed: 21, mode: 22, failsafe: 23, landing: 24, battery: 25, calibrated: 26, xyValid: 27,
+  armed: 21, mode: 22, failsafe: 23, landing: 24, battery: 25, calibrated: 26, xyValid: 27, owner: 28,
 };
+
+// Owners from espnowinput.Owner.
+export const OWNERS = ['none', 'joystick', 'ground station'];
 
 export const MODES = ['Acro', 'Stabilize', 'AltHold', 'PosHold'];
 export const FAILSAFES = ['none', 'input lost', 'low battery', 'tilt', 'height lost'];
@@ -75,10 +91,18 @@ export class Sim extends EventTarget {
     Atomics.notify(this.ctrl, LAYOUT.speed);
   }
 
-  // sendPacket hands a joystick packet to the drone, as if it came over ESP-NOW.
-  sendPacket(p) {
-    this.bytes.set(p, LAYOUT.input);
-    Atomics.add(this.ctrl, LAYOUT.inputSeq, 1);
+  // sendPacket hands a packet from src to the drone, as if it came over ESP-NOW. A full queue drops it, like a busy radio.
+  sendPacket(src, p) {
+    const L = LAYOUT;
+    const w = Atomics.load(this.ctrl, L.queueWrite);
+    if (w - Atomics.load(this.ctrl, L.queueRead) >= L.slots || p.length > L.slotSize - 8) {
+      return;
+    }
+    const at = L.queue + (w % L.slots) * L.slotSize;
+    this.bytes.set(src, at);
+    this.bytes[at + 6] = p.length;
+    this.bytes.set(p, at + 8);
+    Atomics.store(this.ctrl, L.queueWrite, w + 1);
   }
 
   stateSeq() {

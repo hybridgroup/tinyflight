@@ -1,4 +1,4 @@
-import {Sim, STATE, MODES, FAILSAFES} from './sim.js';
+import {Sim, STATE, MODES, FAILSAFES, OWNERS, DRONE_MAC} from './sim.js';
 import {View} from './view.js';
 import {Joystick} from './joystick.js';
 import {Sound} from './motorsound.js';
@@ -8,9 +8,8 @@ import {randomTerrain, record} from './terrain.js';
 const $ = (id) => document.getElementById(id);
 const sim = new Sim();
 const view = new View($('view'));
-// MAC in boards/sim/world.go.
 const gamepad = new Gamepad();
-const joystick = new Joystick($('joystick'), sim, [0x02, 0x54, 0x46, 0x53, 0x49, 0x4D], gamepad);
+const joystick = new Joystick($('joystick'), sim, DRONE_MAC, gamepad);
 
 const status = $('status');
 function setStatus(text, cls = '') {
@@ -40,6 +39,21 @@ sim.addEventListener('error', (e) => {
   consoleBox.hidden = false;
 });
 sim.addEventListener('exited', (e) => setStatus(`exited ${e.detail.code}`, 'error'));
+
+// Ground station programs reach the drone through the server. See tools/tinyflightsim/radio.go.
+// A static copy of the page has no server, so the stream fails once and stays closed.
+const radio = new EventSource('api/radio');
+radio.onmessage = (e) => {
+  const p = new Uint8Array(e.data.match(/../g).map((h) => parseInt(h, 16)));
+  sim.sendPacket(p.subarray(0, 6), p.subarray(6));
+};
+sim.addEventListener('radio', (e) => {
+  const {dst, data} = e.detail;
+  const body = new Uint8Array(6 + data.length);
+  body.set(dst);
+  body.set(data, 6);
+  fetch('api/radio', {method: 'POST', body}).catch(() => {});
+});
 
 $('restart').onclick = () => {
   consoleText.textContent = '';
@@ -98,7 +112,7 @@ for (const el of document.querySelectorAll('header button, header select')) {
 
 const hud = {
   armed: $('hud-armed'), mode: $('hud-mode'), failsafe: $('hud-failsafe'), height: $('hud-height'),
-  est: $('hud-est'), speed: $('hud-speed'), battery: $('hud-battery'), time: $('hud-time'),
+  est: $('hud-est'), speed: $('hud-speed'), battery: $('hud-battery'), time: $('hud-time'), link: $('hud-link'),
 };
 
 function updateHUD(s) {
@@ -115,6 +129,9 @@ function updateHUD(s) {
   hud.speed.textContent = `${v.toFixed(2)} m/s`;
   hud.battery.textContent = `${s[STATE.battery].toFixed(2)} V`;
   hud.time.textContent = `${s[STATE.time].toFixed(1)} s`;
+  if (hud.link) {
+    hud.link.textContent = OWNERS[s[STATE.owner]] ?? '-';
+  }
 }
 
 let last = performance.now();

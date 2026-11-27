@@ -75,41 +75,12 @@ func Start() (*Input, error) {
 func (in *Input) RunTelemetry(every time.Duration, fillAtom func(t *input.AtomTelemetry), fillState func(s *command.State), info command.Info) {
 	espradio.LockToCore0()
 	defer espradio.UnlockFromCore0()
-	var t input.AtomTelemetry
-	var pkt [input.AtomTelemetrySize]byte
-	var p command.Packet
-	var buf [command.MaxSize]byte
-	var seq uint16
-	info.Protocol = command.Version
 	info.MAC = in.mac
-	for tick := 0; ; tick++ {
+	t := Telemetry{Link: in.Link, Info: info, FillAtom: fillAtom, FillState: fillState}
+	send := in.send
+	for {
 		time.Sleep(every)
-		if addr, ok := in.TakeHello(); ok {
-			p = command.Packet{Type: command.TypeInfo, Info: info}
-			if _, kind := in.Owner(); kind != OwnerNone {
-				p.Info.Flags |= command.InfoOwned
-			}
-			seq++
-			p.Seq = seq
-			in.send(addr, buf[:p.Encode(&buf)])
-		}
-		addr, kind := in.Owner()
-		switch kind {
-		case OwnerJoystick:
-			fillAtom(&t)
-			t.Encode(&pkt)
-			in.send(addr, pkt[:])
-		case OwnerGround:
-			if tick%2 != 0 {
-				continue
-			}
-			p = command.Packet{Type: command.TypeState}
-			fillState(&p.State)
-			in.FillState(&p.State)
-			seq++
-			p.Seq = seq
-			in.send(addr, buf[:p.Encode(&buf)])
-		}
+		t.Tick(send)
 	}
 }
 

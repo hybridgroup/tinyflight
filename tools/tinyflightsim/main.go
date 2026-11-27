@@ -1,5 +1,6 @@
 // Command tinyflightsim serves a browser flight simulator. It builds the StampFly firmware
-// with TinyGo to wasm and runs it against simulated physics, flown with an on-screen Atom Joystick.
+// with TinyGo to wasm and runs it against simulated physics, flown with an on-screen Atom Joystick
+// or a ground station program using the command protocol.
 package main
 
 import (
@@ -9,6 +10,7 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -38,12 +40,29 @@ func main() {
 		log.Fatal(err)
 	}
 
+	udp, err := net.ListenUDP("udp", udpAddr(*addr))
+	if err != nil {
+		log.Fatal(err)
+	}
+	r := newRadio(udp)
+	go r.listen()
+
 	static, _ := fs.Sub(web, "web")
 	http.Handle("/api/firmware.wasm", addHeaders(b))
+	http.Handle("/api/radio", addHeaders(r))
 	http.Handle("/", addHeaders(http.FileServerFS(static)))
 	log.Printf("building %s in %s", *pkg, root)
-	log.Printf("serving on http://%s", *addr)
+	log.Printf("serving on http://%s, ground stations on udp %s", *addr, udp.LocalAddr())
 	log.Fatal(http.ListenAndServe(*addr, nil))
+}
+
+// udpAddr is the address to take ground station packets on, the same host and port as the page.
+func udpAddr(addr string) *net.UDPAddr {
+	a, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return a
 }
 
 // addHeaders allows SharedArrayBuffer and Atomics.wait, which the runner needs.
