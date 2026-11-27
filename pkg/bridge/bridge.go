@@ -1,8 +1,8 @@
 // Package bridge is the USB serial line format of firmware/radio-bridge, which forwards ESP-NOW
 // packets between a computer and the drones. See docs/multi-drone.md.
 //
-//	tx 02544653494d 5446010101002c   computer to bridge, sent to that address
-//	rx 02544653494d 5446018201...    bridge to computer, from that address
+//	tx ffffffffffff 5446010101009d   computer to bridge, sent to that address
+//	rx 02544653494d 5446018101...    bridge to computer, from that address
 //
 // Each line is a tag, the 6 byte address in hex, and the payload in hex. Other lines are log text.
 package bridge
