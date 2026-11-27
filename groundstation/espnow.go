@@ -11,6 +11,18 @@ import (
 
 // Start brings up the radio on espnowinput.Channel and returns a station that uses it.
 func Start() (*Station, error) {
+	s := NewStation(nil)
+	r, err := StartRadio(s.Receive)
+	if err != nil {
+		return nil, err
+	}
+	s.radio = r
+	return s, nil
+}
+
+// StartRadio brings up ESP-NOW on espnowinput.Channel and calls receive with each packet.
+// receive runs in the radio callback, and data is only valid until it returns.
+func StartRadio(receive func(src [6]byte, data []byte)) (Radio, error) {
 	if err := espradio.Enable(espradio.Config{}); err != nil {
 		return nil, err
 	}
@@ -23,9 +35,8 @@ func Start() (*Station, error) {
 	if err := espradio.ESPNowInit(); err != nil {
 		return nil, err
 	}
-	s := NewStation(&radio{channel: espnowinput.Channel()})
-	espradio.ESPNowSetReceiveHandler(func(r espradio.ESPNowReceive) { s.Receive(r.SourceAddress, r.Data) })
-	return s, nil
+	espradio.ESPNowSetReceiveHandler(func(r espradio.ESPNowReceive) { receive(r.SourceAddress, r.Data) })
+	return &radio{channel: espnowinput.Channel()}, nil
 }
 
 // radio sends over ESP-NOW, adding each address as a peer the first time.

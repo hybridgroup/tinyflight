@@ -41,7 +41,7 @@ type Station struct {
 
 // NewStation returns a station that sends with radio. Feed it received packets with Receive.
 func NewStation(radio Radio) *Station {
-	return &Station{radio: radio, found: make(chan command.Info, 8)}
+	return &Station{radio: radio, found: make(chan command.Info, 32)}
 }
 
 // Receive handles a packet from src. Call it from the radio receive handler.
