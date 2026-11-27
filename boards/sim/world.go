@@ -3,10 +3,11 @@ package sim
 
 import (
 	"math"
+	"time"
 
+	"github.com/hybridgroup/tinyflight/devices/espnowinput"
 	"github.com/hybridgroup/tinyflight/pkg/flight"
 	"github.com/hybridgroup/tinyflight/pkg/fmath"
-	"github.com/hybridgroup/tinyflight/pkg/input"
 	"github.com/hybridgroup/tinyflight/pkg/mixer"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 	"github.com/hybridgroup/tinyflight/pkg/params"
@@ -16,13 +17,16 @@ import (
 // MAC is the address of the simulated drone. Joystick packets start with its last 3 bytes.
 var MAC = [6]byte{0x02, 0x54, 0x46, 0x53, 0x49, 0x4D}
 
+// JoystickMAC is the address of the joystick on the sim page.
+var JoystickMAC = [6]byte{0x02, 0x54, 0x46, 0x4A, 0x4F, 0x59}
+
 // Substeps is how many physics steps run for each pass of the flight loop.
 const Substeps = 4
 
 // World is the simulated drone and the hardware the flight stack sees.
 type World struct {
 	Quad     *physics.Quad
-	Joystick Joystick
+	Radio    *espnowinput.Link
 	LED      LED
 	Hardware flight.Hardware
 	now      msg.Time
@@ -38,11 +42,11 @@ func New(cfg params.Config) *World {
 	p.RangeDelay = cfg.AltEst.RangeDelay
 	q := physics.New(p)
 	w := &World{Quad: q, dt: 1 / cfg.LoopHz, imbalance: imbalance(cfg, p)}
-	w.Joystick.dec = input.NewAtomJoystick(MAC)
+	w.Radio = espnowinput.NewLink(MAC)
 	w.Hardware = flight.Hardware{
 		IMU:    chipIMU{q, cfg.Sensors.Rotation.Transpose()},
 		Motors: q,
-		Input:  &w.Joystick,
+		Input:  w.Radio,
 		Baro:   q,
 		Range:  q,
 		Flow:   chipFlow{q, cfg.Sensors.FlowRotation.Transpose()},
@@ -72,6 +76,11 @@ func imbalance(cfg params.Config, p physics.Params) fmath.Vec3 {
 		total += p.MaxThrust * b * b
 	}
 	return t.Scale(-1 / total)
+}
+
+// Receive delivers a packet from src as if it came over ESP-NOW.
+func (w *World) Receive(src [6]byte, data []byte) {
+	w.Radio.Receive(src, data, time.Duration(w.now)*time.Microsecond)
 }
 
 // Now is the simulated time since power on.
@@ -107,7 +116,8 @@ const (
 	StateBattery    = 25 // V
 	StateCalibrated = 26
 	StateXYValid    = 27
-	StateSize       = 28
+	StateOwner      = 28 // espnowinput.Owner
+	StateSize       = 29
 )
 
 // State fills out with the true and estimated state of the drone.
@@ -131,6 +141,8 @@ func (w *World) State(f *flight.Flight, out *[StateSize]float32) {
 	out[StateBattery] = f.Battery().Voltage
 	out[StateCalibrated] = flag(f.Calibrated())
 	out[StateXYValid] = flag(pos.XYValid)
+	_, owner := w.Radio.Owner()
+	out[StateOwner] = float32(owner)
 }
 
 // Layout of the terrain record that SetTerrain reads, x0, y0, cell, cols, rows and then the heights.
@@ -161,37 +173,6 @@ func flag(b bool) float32 {
 		return 1
 	}
 	return 0
-}
-
-// Joystick is the radio link. It decodes Atom Joystick packets with the same decoder as the real radio.
-type Joystick struct {
-	dec      *input.AtomJoystick
-	packet   [input.AtomPacketSize]byte
-	seq      uint32
-	read     uint32
-	Packets  uint32
-	Rejected uint32
-}
-
-// Send delivers a packet as if it came over the air.
-func (j *Joystick) Send(p []byte) {
-	j.packet = [input.AtomPacketSize]byte{}
-	copy(j.packet[:], p)
-	j.seq++
-}
-
-// ReadInput decodes the newest packet, if there is one.
-func (j *Joystick) ReadInput(in *msg.ManualInput) bool {
-	if j.read == j.seq {
-		return false
-	}
-	j.read = j.seq
-	if err := j.dec.Decode(j.packet[:], 0, in); err != nil {
-		j.Rejected++
-		return false
-	}
-	j.Packets++
-	return true
 }
 
 // LED keeps the color the flight stack last set.

@@ -62,7 +62,7 @@ func newRig(t *testing.T) *rig {
 func (r *rig) fly(d float32, check func()) {
 	for i := range int(d * 400) {
 		if i%4 == 0 && (r.pass == nil || r.pass()) {
-			r.w.Joystick.Send(r.s.packet(MAC))
+			r.w.Receive(JoystickMAC, r.s.packet(MAC))
 		}
 		r.w.Step(r.f)
 		if check != nil {
@@ -121,19 +121,19 @@ func TestBadPacketsIgnored(t *testing.T) {
 	other := MAC
 	other[5]++
 	r.s.arm = true
-	r.w.Joystick.Send(r.s.packet(other))
+	r.w.Receive(JoystickMAC, r.s.packet(other))
 	r.w.Step(r.f)
 	bad := r.s.packet(MAC)
 	bad[24]++
-	r.w.Joystick.Send(bad)
+	r.w.Receive(JoystickMAC, bad)
 	r.w.Step(r.f)
 	r.s.arm = false
 	r.fly(0.2, nil)
 	if r.f.Status().Armed {
 		t.Error("armed from bad packets")
 	}
-	if r.w.Joystick.Rejected != 2 {
-		t.Errorf("rejected %d packets, want 2", r.w.Joystick.Rejected)
+	if r.w.Radio.Rejected.Load() != 2 {
+		t.Errorf("rejected %d packets, want 2", r.w.Radio.Rejected.Load())
 	}
 }
 

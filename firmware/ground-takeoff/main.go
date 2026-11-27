@@ -1,9 +1,13 @@
-//go:build tinygo && (esp32c3 || esp32s3)
+//go:build !tinygo || esp32c3 || esp32s3
 
 // Ground station example that flies a Tinyflight drone with the command protocol.
 // It takes off, flies right, hovers, flies back left, and lands. See docs/command-protocol.md.
 //
 //	tinygo flash -target xiao-esp32c3 ./firmware/ground-takeoff
+//
+// Or fly the drone in tinyflightsim from a computer.
+//
+//	go run ./firmware/ground-takeoff
 package main
 
 import (

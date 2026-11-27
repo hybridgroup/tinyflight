@@ -14,6 +14,14 @@ tinygo flash -target xiao-esp32c3 ./firmware/ground-takeoff
 
 For another board, use its TinyGo target, such as `m5stamp-s3a`. Build it with the same `ChannelSetting` as the StampFly. See [Radio channel](../../README.md#radio-channel).
 
+## Flying in the sim
+
+The same program flies the drone in [tinyflightsim](../../docs/simulator.md#flying-with-a-ground-station-program). Start the sim and open the page, then from the root of the repo run
+
+```
+go run ./firmware/ground-takeoff
+```
+
 ## Flying
 
 1. Put the StampFly on flat ground with room around it, and power it on.

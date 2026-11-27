@@ -1,6 +1,6 @@
 # Command protocol design
 
-Status: built and tested in the simulator, not yet flown on a real StampFly.
+Status: built, tested in the simulator, and flown on a real StampFly with the ground-takeoff example.
 
 This is a higher level radio protocol so a program can fly a Tinyflight drone with commands such as take off, hover, go right, hover, land. It is modeled on the Parrot Minidrone protocol used by [tinygo-minidrone](https://github.com/hybridgroup/tinygo-minidrone), but runs over ESP-NOW. It shares the radio with the Atom Joystick protocol in [protocol.md](protocol.md), so the same firmware can be flown by either one.
 
@@ -185,6 +185,7 @@ Each `Drone` has its own heartbeat, and the `Station` routes each `State` by the
 - State machine tests in `pkg/input`, such as Pcmd ignored while taking off, and Emergency from every state.
 - Closed loop tests in `boards/sim` that fly take off, right, hover, land on the simulated quad and check the height and position at each step.
 - Lost link tests that stop the heartbeat in flight and check the drone lands.
+- Ground station programs fly the drone in tinyflightsim before a real flight. See [simulator.md](simulator.md#flying-with-a-ground-station-program).
 
 ## Plan
 
@@ -193,10 +194,10 @@ Each `Drone` has its own heartbeat, and the `Station` routes each `State` by the
 3. Dispatcher and ownership in `devices/espnowinput`, and `State` telemetry.
 4. Ground station client package and an example program under `firmware/`.
 5. Fly it on a real StampFly.
+6. Fly ground station programs in tinyflightsim.
 
 ## Open questions
 
 - **Moves by distance.** Tinyflight has a position estimate, so a later `MoveBy(dx, dy, dz)` could fly to a point relative to where the drone is. Version 1 has only timed moves like the Minidrone.
 - **Security.** Like the Atom protocol, packets are not authenticated. ESP-NOW encryption would fix that, but lowers the number of peers per ground station.
 - **Camera frames.** Camera packets are broadcast with no drone ID, so frames from several drones get mixed. A drone ID in the camera header would fix that.
-- **Sim.** The browser sim could accept command packets too, so ground station programs can be tested before real flights.

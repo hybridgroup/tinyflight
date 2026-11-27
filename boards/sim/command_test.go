@@ -10,12 +10,14 @@ import (
 	"github.com/hybridgroup/tinyflight/pkg/input"
 )
 
-// cmdRig flies the simulated drone with the command protocol, like a ground station would.
+// groundMAC is the address of the ground station in the tests.
+var groundMAC = [6]byte{0x02, 0x47, 0x53, 0, 0, 1}
+
+// cmdRig flies the simulated drone with the command protocol over its radio, like a ground station would.
 type cmdRig struct {
 	t    *testing.T
 	w    *World
 	f    *flight.Flight
-	c    *input.Commands
 	seq  uint16
 	pcmd command.Pcmd
 	// beat is false to stop the heartbeat, as if the link was lost.
@@ -24,24 +26,23 @@ type cmdRig struct {
 
 func newCmdRig(t *testing.T) *cmdRig {
 	w := New(stampfly.Config())
-	c := &input.Commands{}
-	w.Hardware.Input = c
 	f := flight.New(w.Hardware, stampfly.Config())
-	c.Vehicle = f
-	return &cmdRig{t: t, w: w, f: f, c: c, beat: true}
+	w.Radio.SetVehicle(f)
+	return &cmdRig{t: t, w: w, f: f, beat: true}
 }
 
-// send encodes and decodes the packet, so the test goes through the wire format too.
 func (r *cmdRig) send(p command.Packet) {
 	r.seq++
 	p.Seq = r.seq
 	var buf [command.MaxSize]byte
-	n := p.Encode(&buf)
-	var got command.Packet
-	if err := command.Decode(buf[:n], &got); err != nil {
-		r.t.Fatal(err)
-	}
-	r.c.Handle(&got)
+	r.w.Receive(groundMAC, buf[:p.Encode(&buf)])
+}
+
+// flying is the flying state the drone reports in State.
+func (r *cmdRig) flying() uint8 {
+	var s command.State
+	r.w.Radio.FillState(&s)
+	return s.Flying
 }
 
 // fly sends the Pcmd heartbeat 20 times a second for d seconds.
@@ -59,11 +60,11 @@ func (r *cmdRig) until(want uint8, d float32) {
 	r.t.Helper()
 	for range int(d * 20) {
 		r.fly(0.05)
-		if r.c.Flying() == want {
+		if r.flying() == want {
 			return
 		}
 	}
-	r.t.Fatalf("flying state %d after %v s, want %d, status %+v", r.c.Flying(), d, want, r.f.Status())
+	r.t.Fatalf("flying state %d after %v s, want %d, status %+v", r.flying(), d, want, r.f.Status())
 }
 
 func (r *cmdRig) takeOff() {
@@ -87,13 +88,13 @@ func TestCommandFlight(t *testing.T) {
 	start := q.Pos
 	r.pcmd = command.Pcmd{Right: 50}
 	r.fly(2)
-	if r.c.Flying() != command.FlyingFlying {
-		t.Errorf("flying state %d while moving", r.c.Flying())
+	if r.flying() != command.FlyingFlying {
+		t.Errorf("flying state %d while moving", r.flying())
 	}
 	r.pcmd = command.Pcmd{}
 	r.fly(3)
-	if r.c.Flying() != command.FlyingHovering {
-		t.Errorf("flying state %d after stopping", r.c.Flying())
+	if r.flying() != command.FlyingHovering {
+		t.Errorf("flying state %d after stopping", r.flying())
 	}
 	d := q.Pos.Sub(start)
 	if d.Y < 0.3 || fmath.Abs(d.X) > 0.15 {
@@ -157,8 +158,8 @@ func TestCommandEmergency(t *testing.T) {
 		t.Fatal("still armed after Emergency")
 	}
 	r.fly(0.1)
-	if r.c.Flying() != command.FlyingLanded {
-		t.Errorf("flying state %d after Emergency", r.c.Flying())
+	if r.flying() != command.FlyingLanded {
+		t.Errorf("flying state %d after Emergency", r.flying())
 	}
 }
 
@@ -179,7 +180,7 @@ func TestCommandTakeOffBeforeCalibration(t *testing.T) {
 	r := newCmdRig(t)
 	r.send(command.Packet{Type: command.TypeTakeOff})
 	r.fly(1)
-	if r.c.Flying() != command.FlyingLanded || r.f.Status().Armed {
-		t.Errorf("flying state %d armed %v, want landed", r.c.Flying(), r.f.Status().Armed)
+	if r.flying() != command.FlyingLanded || r.f.Status().Armed {
+		t.Errorf("flying state %d armed %v, want landed", r.flying(), r.f.Status().Armed)
 	}
 }

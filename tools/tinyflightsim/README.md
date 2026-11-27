@@ -1,6 +1,6 @@
 # tinyflightsim
 
-A browser flight sim for Tinyflight. It builds the real [firmware/stampfly](../../firmware/stampfly/README.md) with TinyGo to WebAssembly and runs it against a physics model of the StampFly. Fly it with an on-screen M5 Atom Joystick, the keyboard, a gamepad or a joystick, with motor sound, over a flat floor or random terrain.
+A browser flight sim for Tinyflight. It builds the real [firmware/stampfly](../../firmware/stampfly/README.md) with TinyGo to WebAssembly and runs it against a physics model of the StampFly. Fly it with an on-screen M5 Atom Joystick, the keyboard, a gamepad or a joystick, with motor sound, over a flat floor or random terrain. Or fly it from a ground station program with the [command protocol](../../docs/command-protocol.md).
 
 ![tinyflightsim](../../images/tinyflightsim.png)
 
@@ -19,7 +19,7 @@ Then open http://localhost:8080. Open it from the server and not as a file, sinc
 
 | Flag | Default | Description |
 | --- | --- | --- |
-| `-addr` | `localhost:8080` | Address to serve on |
+| `-addr` | `localhost:8080` | Address to serve the page on, and to take ground station packets on over UDP |
 | `-repo` | `../..` | Root of the tinyflight module |
 | `-tinygo` | `tinygo` | TinyGo command |
 | `-firmware` | `./firmware/stampfly` | Firmware package to build |
@@ -34,7 +34,7 @@ docker run --rm -it -p 8080:8080 -e GOFLAGS=-buildvcs=false -v $(pwd):/src -w /s
 
 ## Layout
 
-The page files in `web` are embedded in the binary. `web/runner.js` runs the firmware in a web worker, and the page talks to it through a SharedArrayBuffer. The simulated drone itself is in `boards/sim` and `pkg/sim`.
+The page files in `web` are embedded in the binary. `web/runner.js` runs the firmware in a web worker, and the page talks to it through a SharedArrayBuffer. `radio.go` relays packets between ground station programs and the page. The simulated drone itself is in `boards/sim` and `pkg/sim`.
 
 ## Tests
 
