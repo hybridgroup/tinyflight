@@ -577,9 +577,6 @@ func (f *Flight) pilotInput() *msg.ManualInput {
 	return &f.held
 }
 
-// stickCentre is how far from centre in -1 to 1 the roll and pitch sticks count as centred.
-const stickCentre = 0.1
-
 // lostPosition levels out when PosHold loses its position, since a held stick meant a speed and would now
 // mean a tilt. Once the sticks are centred they set the tilt as in AltHold.
 func (f *Flight) lostPosition(roll, pitch float32, mode msg.FlightMode) (float32, float32) {
@@ -588,7 +585,7 @@ func (f *Flight) lostPosition(roll, pitch float32, mode msg.FlightMode) (float32
 	}
 	f.xyHold = false
 	in := f.pilotInput()
-	if !f.xyLost || mode != msg.ModePosHold || (fmath.Abs(in.Roll) < stickCentre && fmath.Abs(in.Pitch) < stickCentre) {
+	if !f.xyLost || mode != msg.ModePosHold || (fmath.Abs(in.Roll) < msg.StickCentre && fmath.Abs(in.Pitch) < msg.StickCentre) {
 		f.xyLost = false
 		return roll, pitch
 	}
@@ -615,8 +612,8 @@ func (f *Flight) holdPosition(roll, pitch, dt float32) (float32, float32) {
 	s, c := fmath.SinCos(yaw)
 	m := f.cfg.Manual.MaxTilt
 	scale := f.cfg.Horizontal.MaxSpeed
-	fwd := -fmath.Deadband(pitch/m, stickCentre) * scale
-	right := fmath.Deadband(roll/m, stickCentre) * scale
+	fwd := -fmath.Deadband(pitch/m, msg.StickCentre) * scale
+	right := fmath.Deadband(roll/m, msg.StickCentre) * scale
 	vel := fmath.Vec3{X: c*fwd - s*right, Y: s*fwd + c*right}
 	switch {
 	case fwd != 0 || right != 0:

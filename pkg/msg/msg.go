@@ -129,6 +129,9 @@ func (m FlightMode) String() string {
 	return "unknown"
 }
 
+// StickCentre is how far from centre in -1 to 1 the roll and pitch sticks count as centred in PosHold.
+const StickCentre = 0.1
+
 // ManualInput is what the pilot asks for. Sticks are -1 to 1, throttle is 0 to 1.
 type ManualInput struct {
 	Time      Time
