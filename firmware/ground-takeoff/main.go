@@ -41,7 +41,7 @@ func main() {
 	time.Sleep(5 * time.Second)
 
 	println("right")
-	drone.Right(30)
+	drone.Right(50)
 	time.Sleep(2 * time.Second)
 
 	println("hover")
@@ -49,7 +49,7 @@ func main() {
 	time.Sleep(3 * time.Second)
 
 	println("left")
-	drone.Left(30)
+	drone.Left(50)
 	time.Sleep(2 * time.Second)
 
 	println("hover")

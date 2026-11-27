@@ -114,8 +114,8 @@ func (c *Commands) ReadInput(out *msg.ManualInput) bool {
 		out.Arm = true
 	case command.FlyingFlying:
 		out.Arm = true
-		out.Roll = float32(c.pcmd.Right) / 100
-		out.Pitch = -float32(c.pcmd.Forward) / 100
+		out.Roll = speedStick(c.pcmd.Right)
+		out.Pitch = -speedStick(c.pcmd.Forward)
 		out.Yaw = float32(c.pcmd.Yaw) / 100
 		out.Climb = float32(c.pcmd.Up) / 100
 	case command.FlyingLanding:
@@ -123,6 +123,18 @@ func (c *Commands) ReadInput(out *msg.ManualInput) bool {
 		out.Climb = -1
 	}
 	return true
+}
+
+// speedStick turns a Pcmd percent into a stick past the PosHold centre, so N percent asks for N percent of the top speed.
+func speedStick(v int8) float32 {
+	s := fmath.Clamp(float32(v)/100, -1, 1) * (1 - msg.StickCentre)
+	switch {
+	case v > 0:
+		return s + msg.StickCentre
+	case v < 0:
+		return s - msg.StickCentre
+	}
+	return 0
 }
 
 // step moves the state machine on from what the vehicle is doing.

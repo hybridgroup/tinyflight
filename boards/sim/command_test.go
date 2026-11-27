@@ -124,6 +124,19 @@ func TestCommandFlight(t *testing.T) {
 	}
 }
 
+// TestCommandSpeed checks a Pcmd percent asks for that share of the top speed, with no loss to the stick centre.
+func TestCommandSpeed(t *testing.T) {
+	r := newCmdRig(t)
+	q := r.w.Quad
+	r.takeOff()
+	r.pcmd = command.Pcmd{Right: 30}
+	r.fly(3)
+	want := 0.3 * stampfly.Config().Horizontal.MaxSpeed
+	if v := q.Vel.Y; fmath.Abs(v-want) > 0.03 {
+		t.Errorf("flying right at %.2f m/s, want %.2f", v, want)
+	}
+}
+
 func TestCommandTakeOffHeight(t *testing.T) {
 	r := newCmdRig(t)
 	r.fly(1.5)

@@ -14,7 +14,7 @@ This is a higher level radio protocol so a program can fly a Tinyflight drone wi
 
 ## How it fits the flight stack
 
-In PosHold the sticks already ask for a speed, not a tilt. `holdPosition` in `pkg/flight/flight.go` turns roll and pitch into a speed in the body frame of up to `Horizontal.MaxSpeed`, 0.6 m/s. The climb input asks for a climb rate of up to `MaxClimb`, 0.5 m/s. Centered sticks hold position and height. This is the same model as the Minidrone `Pcmd`, so a command such as right at 30% is the roll stick at 0.3 in PosHold.
+In PosHold the sticks already ask for a speed, not a tilt. `holdPosition` in `pkg/flight/flight.go` turns roll and pitch into a speed in the body frame of up to `Horizontal.MaxSpeed`, 0.6 m/s. The climb input asks for a climb rate of up to `MaxClimb`, 0.5 m/s. Centered sticks hold position and height. This is the same model as the Minidrone `Pcmd`, so a command such as right at 30% asks for 30% of the top speed, 0.18 m/s.
 
 The drone side turns commands into a `msg.ManualInput` each step. The commander, failsafes and controllers see it like any other pilot input.
 
@@ -131,13 +131,14 @@ The values match `FlyingState` in tinygo-minidrone, so programs written for it r
 | Landed | false | 0 | 0 | Taking off on TakeOff |
 | Taking off | true | 1, slowing to 0.2 over the last 30 cm | 0 | Hovering within 3 cm of the target height |
 | Hovering | true | 0 | 0 | Flying on a Pcmd that is not all zeros |
-| Flying | true | up / 100 | right / 100, -forward / 100, yaw / 100 | Hovering on an all zero Pcmd |
+| Flying | true | up / 100 | right, -forward and yaw / 100, with roll and pitch past the stick centre | Hovering on an all zero Pcmd |
 | Landing | true | -1 | 0 | Landed when the drone disarms |
 | Emergency | false | 0 | 0 | Landed |
 
 Notes:
 
 - Pitch is negated since a positive pitch stick is nose up, which flies backward.
+- PosHold ignores roll and pitch within `msg.StickCentre` of centre and scales the rest. Commands start past that point, so a percent of the command is the same percent of the top speed.
 - Taking off needs the height and arm state, which `hal.Input` does not give. `Commands.Vehicle` reads them from the flight loop, which a `*flight.Flight` provides.
 - Landing relies on the existing landed check, `LandedDisarm` in `pkg/flight`, which disarms after 2 s on the ground.
 - A Pcmd while taking off or landing is used only as the heartbeat.
@@ -160,7 +161,7 @@ d := station.Drone(infos[0].MAC)
 d.Start()                                 // start the 20 Hz Pcmd heartbeat
 d.TakeOff()
 time.Sleep(5 * time.Second)
-d.Right(30)
+d.Right(50)
 time.Sleep(2 * time.Second)
 d.Hover()
 time.Sleep(3 * time.Second)

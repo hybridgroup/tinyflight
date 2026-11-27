@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/hybridgroup/tinyflight/pkg/command"
+	"github.com/hybridgroup/tinyflight/pkg/fmath"
 	"github.com/hybridgroup/tinyflight/pkg/msg"
 )
 
@@ -70,7 +71,7 @@ func TestCommandsTakeOffAndLand(t *testing.T) {
 
 	c.Handle(&command.Packet{Type: command.TypePcmd, Seq: 6, Pcmd: command.Pcmd{Right: 50, Forward: 20, Yaw: -10, Up: 30}})
 	in = read(t, c)
-	if c.Flying() != command.FlyingFlying || in.Roll != 0.5 || in.Pitch != -0.2 || in.Yaw != -0.1 || in.Climb != 0.3 {
+	if c.Flying() != command.FlyingFlying || !near(fmath.Deadband(in.Roll, msg.StickCentre), 0.5) || !near(fmath.Deadband(in.Pitch, msg.StickCentre), -0.2) || in.Yaw != -0.1 || in.Climb != 0.3 {
 		t.Fatalf("pcmd gave state %d input %+v", c.Flying(), in)
 	}
 	send(c, command.TypePcmd, 7)
@@ -156,3 +157,6 @@ func TestCommandsFailsafeLanding(t *testing.T) {
 		t.Fatalf("state %d during a failsafe landing", c.Flying())
 	}
 }
+
+// near reports whether a speed request is within 0.1% of want.
+func near(got, want float32) bool { return fmath.Abs(got-want) < 0.001 }
