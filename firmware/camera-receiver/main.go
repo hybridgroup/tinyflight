@@ -1,8 +1,9 @@
 //go:build tinygo && (esp32c3 || esp32s3)
 
 // Camera receiver for the ground. It listens for camera packets from a StampFly over ESP-NOW and
-// prints each one to USB serial for tools/cameraview. It never sends, so it cannot disturb the joystick.
-// An SSD1306 display on the default I2C pins, if there is one, shows the image too.
+// prints each one to USB serial for tools/cameraview, with the MAC of the drone that sent it. It never sends,
+// so it cannot disturb the joystick. An SSD1306 display on the default I2C pins, if there is one, shows the
+// image from the first drone it hears.
 //
 //	tinygo flash -target xiao-esp32c3 ./firmware/camera-receiver
 package main
@@ -16,8 +17,13 @@ import (
 	"tinygo.org/x/espradio"
 )
 
+type frame struct {
+	drone [6]byte
+	input.CameraFrame
+}
+
 // frames is small since the newest frame matters most. A full queue drops new frames.
-var frames = make(chan input.CameraFrame, 4)
+var frames = make(chan frame, 4)
 
 func main() {
 	time.Sleep(time.Second)
@@ -33,11 +39,16 @@ func main() {
 		println("display found")
 	}
 	var line []byte
+	var shown [6]byte
+	heard := false
 	for f := range frames {
-		line = input.AppendCameraLine(line[:0], &f)
+		line = input.AppendCameraLine(line[:0], f.drone, &f.CameraFrame)
 		os.Stdout.Write(line)
-		if disp != nil {
-			disp.show(&f)
+		if !heard {
+			shown, heard = f.drone, true
+		}
+		if disp != nil && f.drone == shown {
+			disp.show(&f.CameraFrame)
 		}
 	}
 }
@@ -60,8 +71,8 @@ func start() error {
 }
 
 func receive(r espradio.ESPNowReceive) {
-	var f input.CameraFrame
-	if input.DecodeCamera(r.Data, &f) != nil {
+	f := frame{drone: r.SourceAddress}
+	if input.DecodeCamera(r.Data, &f.CameraFrame) != nil {
 		return
 	}
 	select {

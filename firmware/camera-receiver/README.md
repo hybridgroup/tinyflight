@@ -33,8 +33,10 @@ tinygo flash -target xiao-esp32c3 -ldflags="-X main.FlipVertical=true -X main.Fl
 Each frame is printed as a line in the form
 
 ```
-cam seq format width height chunk chunks count pixels... sum
+cam drone seq format width height chunk chunks count pixels... sum
 ```
+
+where `drone` is the MAC of the drone that sent it, in hex, from ESP-NOW. With several camera drones on the channel, the display shows the first one it heard.
 
 See [docs/protocol.md](../../docs/protocol.md#camera-packet-drone-to-ground-receiver).
 

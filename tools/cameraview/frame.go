@@ -17,21 +17,25 @@ var (
 
 // chunk is one line from firmware/camera-receiver.
 type chunk struct {
+	drone                                    string
 	seq, format, width, height, index, count int
 	pixels                                   []int
 }
 
-// parseLine reads "cam seq format width height chunk chunks count pixels... sum".
+// parseLine reads "cam drone seq format width height chunk chunks count pixels... sum", where drone is the sender MAC in hex.
 func parseLine(line string) (chunk, error) {
 	fields := strings.Fields(line)
 	if len(fields) == 0 || fields[0] != "cam" {
 		return chunk{}, errNotCamera
 	}
-	if len(fields) < 9 {
+	if len(fields) < 10 || len(fields[1]) != 12 {
 		return chunk{}, errBadLine
 	}
-	v := make([]int, len(fields)-1)
-	for i, f := range fields[1:] {
+	if _, err := strconv.ParseUint(fields[1], 16, 64); err != nil {
+		return chunk{}, errBadLine
+	}
+	v := make([]int, len(fields)-2)
+	for i, f := range fields[2:] {
 		n, err := strconv.Atoi(f)
 		if err != nil {
 			return chunk{}, errBadLine
@@ -45,7 +49,7 @@ func parseLine(line string) (chunk, error) {
 	if sum != v[len(v)-1] {
 		return chunk{}, errSum
 	}
-	c := chunk{seq: v[0], format: v[1], width: v[2], height: v[3], index: v[4], count: v[5]}
+	c := chunk{drone: strings.ToLower(fields[1]), seq: v[0], format: v[1], width: v[2], height: v[3], index: v[4], count: v[5]}
 	n := v[6]
 	if len(v) != 8+n || c.count == 0 || c.index >= c.count {
 		return chunk{}, errBadLine
@@ -56,6 +60,7 @@ func parseLine(line string) (chunk, error) {
 
 // Frame is a whole image as the web page gets it. Pixels times Scale gives the value in Unit.
 type Frame struct {
+	Drone  string  `json:"drone"`
 	Seq    int     `json:"seq"`
 	Width  int     `json:"width"`
 	Height int     `json:"height"`
@@ -81,7 +86,7 @@ func (a *assembler) add(c chunk) (Frame, bool) {
 	}
 	size := c.width * c.height
 	if a.got == nil || c.seq != a.frame.Seq || len(a.frame.Pixels) != size || len(a.got) != c.count {
-		a.frame = Frame{Seq: c.seq, Width: c.width, Height: c.height, Scale: 0.25, Unit: "°C", Pixels: make([]int, size)}
+		a.frame = Frame{Drone: c.drone, Seq: c.seq, Width: c.width, Height: c.height, Scale: 0.25, Unit: "°C", Pixels: make([]int, size)}
 		a.got = make([]bool, c.count)
 		a.left = c.count
 	}

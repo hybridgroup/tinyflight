@@ -116,4 +116,5 @@ Then open http://localhost:8081. A hand in front of the sensor shows as a warm s
 - Frames are only sent once the joystick has paired, since the joystick checks every packet while pairing. After that it ignores camera packets.
 - Each frame is one 139 byte broadcast, about 1.4 kB/s. The `cam_sent` and `cam_failed` counts in the USB printout show how many went out.
 - The receiver only listens and never sends.
-- The receiver prints each frame as a line `cam seq format width height chunk chunks count pixels... sum`. The viewer drops any line where the sum does not match.
+- The receiver prints each frame as a line `cam drone seq format width height chunk chunks count pixels... sum`, where `drone` is the MAC of the sender in hex. The viewer drops any line where the sum does not match.
+- With more than one camera drone on the channel, the viewer shows a Drone picker, and the receiver display shows the first drone it heard.

@@ -1,6 +1,6 @@
 # Multiple drone design
 
-Status: design, not built yet.
+Status: built and tested with fake drones in Go tests. Not yet flown with several real drones.
 
 This page covers how one ground station could fly several Tinyflight drones at the same time over ESP-NOW. It builds on the [command protocol](command-protocol.md), and also notes what works with only the [Atom protocol](protocol.md) today.
 
@@ -21,7 +21,24 @@ The ground station is an ESP32 running TinyGo with `espradio`. The Atom Joystick
 There are two ways to write the program.
 
 - **All on the ESP32.** The flight program runs on the ground station, with one client per drone from the command protocol client package.
-- **Radio bridge.** The ESP32 forwards packets between USB serial and the radio. Each frame on the serial side carries the drone MAC. A program on a computer does the flying. This is the simplest first step and the easiest to debug.
+- **Radio bridge.** The ESP32 forwards packets between USB serial and the radio. Each line on the serial side carries the drone MAC. A program on a computer does the flying. This is the simplest first step and the easiest to debug.
+
+## Radio bridge
+
+[firmware/radio-bridge](../firmware/radio-bridge/README.md) runs on an ESP32-C3 or ESP32-S3 plugged into the computer. Each packet is one text line with a tag, the address in hex and the payload in hex, from `pkg/bridge`.
+
+```
+tx ffffffffffff 5446010101009d    computer to bridge, a Hello sent to every drone
+rx 02544653494d 5446018101...     bridge to computer, from that address
+```
+
+The bridge forwards every packet it hears. Any other line is log text.
+
+On the computer, `groundstation.StartBridge` takes an open serial port and returns a `Station` with the same API as on the ESP32. [tools/swarm](../tools/swarm/README.md) uses it to find every drone with no owner, take them off together, turn them in place, and land them.
+
+```
+go run ./tools/swarm -port /dev/ttyACM0
+```
 
 ## Limits
 
@@ -42,14 +59,15 @@ The command protocol fixes this with an owner for each drone. Only the owner's p
 
 ## Camera frames
 
-Camera packets are broadcast with no drone ID, so frames from several camera drones get mixed in `tools/cameraview` and `firmware/camera-receiver`. Adding a drone ID, such as the last 3 bytes of the MAC, to the camera header would fix that. This changes the camera packet in [protocol.md](protocol.md#camera-packet-drone-to-ground-receiver), so the receivers need updating at the same time.
+Camera packets have no drone ID, but ESP-NOW gives the receiver the source MAC of each packet. `firmware/camera-receiver` adds it to each line, and `tools/cameraview` joins chunks per drone and shows a Drone picker. The camera packet does not change, so the drone firmware does not either.
 
 ## Plan
 
-1. Build the command protocol, including ownership.
-2. Radio bridge firmware under `firmware/` that forwards between USB serial and any number of drones.
-3. A host program that finds drones with `Hello` and flies them together.
-4. Drone ID in the camera packet, with updated receivers.
+1. Build the command protocol, including ownership. Done.
+2. Radio bridge firmware under `firmware/` that forwards between USB serial and any number of drones. Done, `firmware/radio-bridge`.
+3. A host program that finds drones with `Hello` and flies them together. Done, `tools/swarm`.
+4. Tell camera frames apart by drone, with updated receivers. Done, using the ESP-NOW source MAC.
+5. Fly several real drones with the bridge.
 
 ## Open questions
 

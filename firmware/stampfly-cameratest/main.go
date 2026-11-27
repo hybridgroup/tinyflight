@@ -38,7 +38,7 @@ func main() {
 			println("camera:", err.Error())
 			continue
 		}
-		line = input.AppendCameraLine(line[:0], &f)
+		line = input.AppendCameraLine(line[:0], [6]byte{}, &f)
 		os.Stdout.Write(line)
 	}
 }

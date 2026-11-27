@@ -52,14 +52,19 @@ func readPort(name string, h *hub) {
 	}
 }
 
-// readFrames parses camera lines from r and passes on each whole frame. Other lines are logged.
+// readFrames parses camera lines from r and passes on each whole frame, keeping each drone apart. Other lines are logged.
 func readFrames(r io.Reader, out func(Frame)) error {
-	var a assembler
+	drones := map[string]*assembler{}
 	s := bufio.NewScanner(r)
 	for s.Scan() {
 		c, err := parseLine(s.Text())
 		switch err {
 		case nil:
+			a := drones[c.drone]
+			if a == nil {
+				a = &assembler{}
+				drones[c.drone] = a
+			}
 			if f, ok := a.add(c); ok {
 				out(f)
 			}
