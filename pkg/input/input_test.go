@@ -148,7 +148,7 @@ func TestCameraRoundTrip(t *testing.T) {
 func TestAppendCameraLine(t *testing.T) {
 	f := CameraFrame{Seq: 7, Format: CameraThermal, Width: 2, Height: 1, Chunks: 1, Count: 2}
 	f.Pixels[0], f.Pixels[1] = 100, -4
-	if got, want := string(AppendCameraLine(nil, &f)), "cam 7 1 2 1 0 1 2 100 -4 110\n"; got != want {
+	if got, want := string(AppendCameraLine(nil, [6]byte{0x02, 0x54, 0x46, 0x53, 0x49, 0x4d}, &f)), "cam 02544653494d 7 1 2 1 0 1 2 100 -4 110\n"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }

@@ -42,10 +42,10 @@ The image fills as much of the window as it can and resizes with it. On narrow s
 Each frame arrives as one or more lines in the form
 
 ```
-cam seq format width height chunk chunks count pixels... sum
+cam drone seq format width height chunk chunks count pixels... sum
 ```
 
-where `sum` is the sum of all the numbers before it. Lines with a bad sum are dropped. The chunks of a frame are joined, and a chunk from a new frame drops any frame left unfinished. Only the thermal format is shown, with each pixel in steps of 0.25 °C. See [docs/protocol.md](../../docs/protocol.md#camera-packet-drone-to-ground-receiver).
+where `drone` is the MAC of the drone in hex, and `sum` is the sum of all the numbers after it. Lines with a bad sum are dropped. The chunks of a frame are joined for each drone, and a chunk from a new frame drops any frame left unfinished. With frames from more than one drone, the page shows a Drone picker. Only the thermal format is shown, with each pixel in steps of 0.25 °C. See [docs/protocol.md](../../docs/protocol.md#camera-packet-drone-to-ground-receiver).
 
 Whole frames go to every open page as server sent events on `/events`. A slow page skips frames rather than holding up the others. The page files in `web` are embedded in the binary.
 

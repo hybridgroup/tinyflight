@@ -200,4 +200,3 @@ Each `Drone` has its own heartbeat, and the `Station` routes each `State` by the
 
 - **Moves by distance.** Tinyflight has a position estimate, so a later `MoveBy(dx, dy, dz)` could fly to a point relative to where the drone is. Version 1 has only timed moves like the Minidrone.
 - **Security.** Like the Atom protocol, packets are not authenticated. ESP-NOW encryption would fix that, but lowers the number of peers per ground station.
-- **Camera frames.** Camera packets are broadcast with no drone ID, so frames from several drones get mixed. A drone ID in the camera header would fix that.

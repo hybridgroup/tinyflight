@@ -29,6 +29,8 @@ const smooth = document.getElementById('smooth');
 const flipV = document.getElementById('flip-v');
 const flipH = document.getElementById('flip-h');
 const cursor = document.getElementById('cursor');
+const droneSel = document.getElementById('drone');
+const dronePick = document.getElementById('drone-pick');
 const $ = (id) => document.getElementById(id);
 
 const bar = $('bar').getContext('2d');
@@ -167,11 +169,32 @@ function setStatus(text, cls) {
   status.className = `pill ${cls || ''}`;
 }
 
+// droneName shows a MAC with colons. The bench tool sends no MAC.
+function droneName(mac) {
+  return /^0+$/.test(mac) ? 'USB' : mac.toUpperCase().match(/../g).join(':');
+}
+
+// Each drone gets an option the first time it sends a frame. The picker shows once there are two.
+function addDrone(mac) {
+  if ([...droneSel.options].some((o) => o.value === mac)) return;
+  droneSel.add(new Option(droneName(mac), mac));
+  dronePick.hidden = droneSel.options.length < 2;
+}
+
+droneSel.addEventListener('change', () => {
+  last = null;
+  auto = null;
+  times = [];
+  setStatus('waiting for frames', 'warn');
+});
+
 const events = new EventSource('events');
 events.onopen = () => setStatus('waiting for frames', 'warn');
 events.onerror = () => setStatus('server gone', 'warn');
 events.onmessage = (e) => {
   const f = JSON.parse(e.data);
+  addDrone(f.drone);
+  if (f.drone !== droneSel.value) return;
   last = { ...f, values: f.pixels.map((p) => p * f.scale) };
   const now = performance.now();
   times.push(now);

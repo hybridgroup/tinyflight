@@ -76,10 +76,14 @@ func DecodeCamera(data []byte, f *CameraFrame) error {
 	return nil
 }
 
-// AppendCameraLine writes "cam seq format width height chunk chunks count pixels... sum" for
-// tools/cameraview, where sum adds every value before it so the viewer can drop damaged lines.
-func AppendCameraLine(b []byte, f *CameraFrame) []byte {
-	b = append(b, "cam"...)
+// AppendCameraLine writes "cam drone seq format width height chunk chunks count pixels... sum" for
+// tools/cameraview. drone is the sender MAC in hex, and sum adds every value after it so the viewer can drop damaged lines.
+func AppendCameraLine(b []byte, drone [6]byte, f *CameraFrame) []byte {
+	const digits = "0123456789abcdef"
+	b = append(b, "cam "...)
+	for _, v := range drone {
+		b = append(b, digits[v>>4], digits[v&15])
+	}
 	var sum int64
 	put := func(v int64) {
 		b = append(b, ' ')

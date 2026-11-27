@@ -103,7 +103,7 @@ The stock firmware also defines 0 init, 1 averaging, 4 log and 6 flip.
 
 ## Camera packet, drone to ground receiver
 
-Sent when an optional camera is plugged in, such as the AMG8833 thermal sensor on the Grove port. See [camera.md](camera.md). It is a broadcast, sent only while a controller owns the drone. The joystick ignores it, since it only reads packets that start with `88 88`.
+Sent when an optional camera is plugged in, such as the AMG8833 thermal sensor on the Grove port. See [camera.md](camera.md). It is a broadcast, sent only while a controller owns the drone. Receivers tell drones apart by the ESP-NOW source MAC. The joystick ignores it, since it only reads packets that start with `88 88`.
 
 A frame larger than one packet is split into chunks. Chunk `n` holds the pixels from `n * 119` on, in rows from the top left. The AMG8833 fits in one chunk.
 

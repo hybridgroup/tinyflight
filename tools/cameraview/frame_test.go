@@ -6,7 +6,13 @@ import (
 	"testing"
 )
 
+const drone = "02544653494d"
+
 func line(seq, index, count int, pixels []int) string {
+	return droneLine(drone, seq, index, count, pixels)
+}
+
+func droneLine(mac string, seq, index, count int, pixels []int) string {
 	v := []int{seq, formatThermal, 8, 8, index, count, len(pixels)}
 	v = append(v, pixels...)
 	sum := 0
@@ -14,7 +20,7 @@ func line(seq, index, count int, pixels []int) string {
 		sum += n
 	}
 	var b strings.Builder
-	b.WriteString("cam")
+	b.WriteString("cam " + mac)
 	for _, n := range append(v, sum) {
 		fmt.Fprintf(&b, " %d", n)
 	}
@@ -30,7 +36,7 @@ func TestParseLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.seq != 7 || c.width != 8 || len(c.pixels) != 64 || c.pixels[63] != 143 {
+	if c.drone != drone || c.seq != 7 || c.width != 8 || len(c.pixels) != 64 || c.pixels[63] != 143 {
 		t.Errorf("got %+v", c)
 	}
 	if _, err := parseLine(line(7, 0, 1, px) + "1"); err != errSum {
@@ -41,6 +47,12 @@ func TestParseLine(t *testing.T) {
 	}
 	if _, err := parseLine("cam 1 2 3"); err != errBadLine {
 		t.Errorf("short line gave %v", err)
+	}
+	if _, err := parseLine(droneLine("0254465349zz", 7, 0, 1, px)); err != errBadLine {
+		t.Errorf("bad drone gave %v", err)
+	}
+	if _, err := parseLine(strings.Replace(line(7, 0, 1, px), "cam "+drone, "cam", 1)); err != errBadLine {
+		t.Errorf("line with no drone gave %v", err)
 	}
 }
 
@@ -74,5 +86,32 @@ func TestAssembler(t *testing.T) {
 	f, ok = a.add(c0)
 	if !ok || f.Pixels[chunkPixels+4] != 5 {
 		t.Errorf("two chunk frame %v", ok)
+	}
+}
+
+func TestReadFramesKeepsDronesApart(t *testing.T) {
+	big := make([]int, chunkPixels)
+	rest := []int{1, 2, 3, 4, 5}
+	// Width 31 by 4 needs two chunks. Chunks from two drones arrive interleaved.
+	l := func(mac string, index int, px []int) string {
+		v := []int{9, formatThermal, 31, 4, index, 2, len(px)}
+		v = append(v, px...)
+		sum := 0
+		for _, n := range v {
+			sum += n
+		}
+		var b strings.Builder
+		b.WriteString("cam " + mac)
+		for _, n := range append(v, sum) {
+			fmt.Fprintf(&b, " %d", n)
+		}
+		return b.String() + "\n"
+	}
+	other := "0254465349aa"
+	in := l(drone, 0, big) + l(other, 0, big) + l(drone, 1, rest) + l(other, 1, rest)
+	var got []Frame
+	readFrames(strings.NewReader(in), func(f Frame) { got = append(got, f) })
+	if len(got) != 2 || got[0].Drone != drone || got[1].Drone != other {
+		t.Fatalf("got %d frames %+v", len(got), got)
 	}
 }
