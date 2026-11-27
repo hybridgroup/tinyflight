@@ -28,6 +28,34 @@ Fly the real firmware in a web browser before you fly the real drone. Try it at 
 
 ![tinyflightsim](images/tinyflightsim.png)
 
+## Ground station command protocol
+
+You can also fly from a program running on a ground station ESP32 with commands like "take off", "hover" and "land".
+
+```go
+    station, _ := groundstation.Start()
+
+    drone := station.Drone(info.MAC)
+    drone.Start()
+
+    println("takeoff")
+    drone.TakeOff()
+    time.Sleep(5 * time.Second)
+
+    println("hover")
+    drone.Hover()
+    time.Sleep(3 * time.Second)
+
+    println("land")
+    drone.Land()
+    time.Sleep(5 * time.Second)
+
+    drone.Halt()
+```
+
+See [docs/command-protocol.md](docs/command-protocol.md) for detailed info. The command protocol can fly the drone in tinyflightsim. See [docs/simulator.md](docs/simulator.md#flying-with-a-ground-station-program).
+
+
 ## Tinyflight Features
 
 - Flight modes: Acrobatic, Stabilized, Altitude Hold, and <b>Position Hold</b>
@@ -52,7 +80,6 @@ Architectural details are documented here in [docs/architecture.md](docs/archite
 
 The radio protocol used with the M5 Atom Joystick is documented in [docs/protocol.md](docs/protocol.md).
 
-To fly from a program on a ground station ESP32 with commands like take off, go right and land, see [docs/command-protocol.md](docs/command-protocol.md). The same program can fly the drone in tinyflightsim first. See [docs/simulator.md](docs/simulator.md#flying-with-a-ground-station-program).
 
 How to use the joystick, see [docs/joystick.md](docs/joystick.md).
 
